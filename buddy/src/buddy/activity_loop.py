@@ -36,9 +36,9 @@ from .state import Buddy, State, load_state, mutate_state
 
 # ─── tunables ───────────────────────────────────────────────────────────────
 
-TICK_INTERVAL_S = int(os.environ.get("MCP_CREATURE_BOT_TICK_S", "600"))  # 10 min
-TICK_JITTER = 0.25                                                         # ±25%
-IDLE_THRESHOLD_S = int(os.environ.get("MCP_CREATURE_BOT_IDLE_THRESHOLD_S", "120"))
+TICK_INTERVAL_S = int(os.environ.get("BUDDY_TICK_S", "600"))  # 10 min
+TICK_JITTER = 0.25                                             # ±25%
+IDLE_THRESHOLD_S = int(os.environ.get("BUDDY_IDLE_THRESHOLD_S", "120"))
 SUBPROCESS_TIMEOUT_S = 45
 MODEL_ID = "claude-haiku-4-5-20251001"
 LOG_MAX_LINES = 500

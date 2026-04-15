@@ -14,7 +14,7 @@ from pathlib import Path
 
 
 CLAUDE_SETTINGS = Path.home() / ".claude" / "settings.json"
-MARKER_COMMAND = "python -m mcp_creature_bot.scripts.statusline"
+MARKER_COMMAND = "python -m buddy.scripts.statusline"
 
 
 def main() -> int:

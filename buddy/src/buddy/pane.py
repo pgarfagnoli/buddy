@@ -1,7 +1,7 @@
 """Tmux sidecar pane renderer.
 
 Invoked by /buddy start as:
-    tmux split-window -h -l 32 -d 'python -m mcp_creature_bot.pane'
+    tmux split-window -h -l 32 -d 'python -m buddy.pane'
 
 Runs a 1 Hz loop: reads state, redraws the full pane in alternate screen mode.
 Exits cleanly on SIGTERM/SIGINT.
@@ -25,7 +25,7 @@ _LOGGED_EXC_SIGS: set[str] = set()
 
 
 def _log_pane_exception(ctx: str, exc: BaseException) -> None:
-    """Append a deduped traceback to ~/.claude/mcp-creature-bot/pane.log.
+    """Append a deduped traceback to ~/.claude/buddy/pane.log.
 
     Dedupes by (context, exception type, exception message) so a recurring
     per-tick error logs once per pane lifetime instead of spamming the file.

@@ -1,8 +1,8 @@
-# mcp-creature-bot
+# buddy
 
 An RPG buddy for Claude Code. A Pokemon-style ASCII creature lives in a tmux sidecar pane, gains XP every time you submit a prompt, levels up, and can be sent on simulated background quests.
 
-**Unix + tmux required.** No Windows support.
+**Unix + tmux required.** No Windows support. (Homebrew pulls in `tmux` automatically.)
 
 ## What you get
 
@@ -16,14 +16,14 @@ An RPG buddy for Claude Code. A Pokemon-style ASCII creature lives in a tmux sid
 
 ## Install
 
-End users: `brew install pgarfagnoli/buddy/buddy` (see the repo root README for tap instructions).
+End users: see the repo root README for the tap + `brew install buddy` flow.
 
 For development from source, two commands from this subfolder:
 
 ```bash
-cd mcp-creature-bot
+cd buddy
 pip install --user -e .
-mcp-creature-bot-install
+buddy-install
 ```
 
 The first installs the Python package into your user site-packages (editable, so source edits take effect immediately). The second wires everything up at user scope — no need to open Claude inside any particular directory:
@@ -33,7 +33,7 @@ The first installs the Python package into your user site-packages (editable, so
 - merges Stop / SessionStart / SessionEnd hooks into `~/.claude/settings.json`
 - installs the compact buddy statusLine
 
-Running `mcp-creature-bot-install` a second time is a no-op — the installer is idempotent.
+Running `buddy-install` a second time is a no-op — the installer is idempotent.
 
 ## Use it
 
@@ -56,7 +56,7 @@ Then in Claude Code — either use the slash commands or just ask in natural lan
 - `/buddy rename <name>`
 - `/buddy uninstall` — wipe state
 
-**Note on slash commands**: Claude Code discovers `~/.claude/commands/*.md` at session startup. If you run `mcp-creature-bot-install` mid-session, restart Claude Code to pick the new commands up — or just say "start my buddy" in plain English and Claude will call the `start_pane` MCP tool directly.
+**Note on slash commands**: Claude Code discovers `~/.claude/commands/*.md` at session startup. If you run `buddy-install` mid-session, restart Claude Code to pick the new commands up — or just say "start my buddy" in plain English and Claude will call the `start_pane` MCP tool directly.
 
 ## How the pieces fit
 
@@ -75,7 +75,7 @@ Then in Claude Code — either use the slash commands or just ask in natural lan
 │    │ → sum tokens from transcript    │  + drain     │
 │    │ → append to xp.log              │              │
 │    ↓                                 │              │
-│  ~/.claude/mcp-creature-bot/         │              │
+│  ~/.claude/buddy/                    │              │
 │    xp.log  (queue)  ────drain────→  state.json      │
 │                          (MCP server tool calls)    │
 └─────────────────────────────────────────────────────┘
@@ -88,11 +88,11 @@ Then in Claude Code — either use the slash commands or just ask in natural lan
 ## Uninstall
 
 ```bash
-mcp-creature-bot-uninstall
-pip uninstall mcp-creature-bot
+buddy-uninstall
+brew uninstall buddy
 ```
 
-`mcp-creature-bot-uninstall` deregisters the user-scope MCP server, removes the `/buddy*` commands from `~/.claude/commands/`, strips the hooks and statusLine from `~/.claude/settings.json`, kills any running sidecar panes, and deletes state under `~/.claude/mcp-creature-bot/`. User-edited command files are left alone. The second command removes the Python package itself.
+`buddy-uninstall` deregisters the user-scope MCP server, removes the `/buddy*` commands from `~/.claude/commands/`, strips the hooks and statusLine from `~/.claude/settings.json`, kills any running sidecar panes, and deletes state under `~/.claude/buddy/`. User-edited command files are left alone. The second command removes the Python package itself.
 
 ## Notes
 
@@ -100,3 +100,4 @@ pip uninstall mcp-creature-bot
 - Level curve: `xp_to_next(L) = round(50 * L^1.5)`
 - Quest results are rolled at claim time, not start time — the pane is pure display
 - Quest timers use absolute epoch, so laptop sleep doesn't break anything
+- **Migration note:** if you're upgrading from the `mcp-creature-bot` era, `buddy-install` will strip the old hooks, drop the old user-scope MCP server, and the next run of the package will move `~/.claude/mcp-creature-bot/` to `~/.claude/buddy/` automatically. You won't lose your buddy.

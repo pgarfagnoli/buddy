@@ -32,7 +32,7 @@ from .state import (
     read_hook_events,
 )
 
-mcp = FastMCP("mcp-creature-bot")
+mcp = FastMCP("buddy")
 
 
 # ─── helpers ────────────────────────────────────────────────────────────────
@@ -674,7 +674,7 @@ def _activity_loop_status() -> str:
         return "already_live"
     try:
         subprocess.Popen(
-            [sys.executable, "-m", "mcp_creature_bot.activity_loop"],
+            [sys.executable, "-m", "buddy.activity_loop"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
@@ -823,7 +823,7 @@ def start_pane() -> dict[str, Any]:
     # Also forward PYTHONPATH explicitly via tmux -e so the renderer can import us
     # whether or not the package is pip-installed. Target this window explicitly
     # so the split lands in the right place when multiple windows are live.
-    spawn_cmd = f"{sys.executable} -m mcp_creature_bot.pane"
+    spawn_cmd = f"{sys.executable} -m buddy.pane"
     tmux_args = [
         "split-window", "-h", "-l", "34", "-d",
         "-t", window_id,

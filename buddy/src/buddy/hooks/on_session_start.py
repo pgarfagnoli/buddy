@@ -24,7 +24,7 @@ def main() -> int:
     if s.buddy is None:
         # Non-JSON stdout is injected into Claude's context as a system reminder.
         print(
-            "mcp-creature-bot is installed but no buddy has been chosen yet. "
+            "buddy is installed but no buddy has been chosen yet. "
             "If the user mentions the buddy, suggest they pick a starter "
             "(call the list_species tool, then choose_buddy) and run /buddy "
             "inside tmux to launch the sidecar pane."

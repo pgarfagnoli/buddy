@@ -3,8 +3,8 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mcp-creature-bot"
-version = "0.1.0"
+name = "buddy"
+version = "0.2.0"
 description = "An RPG buddy for Claude Code — Pokemon-style ASCII companion that gains XP from your prompts."
 requires-python = ">=3.10"
 readme = "README.md"
@@ -13,12 +13,12 @@ dependencies = [
 ]
 
 [project.scripts]
-mcp-creature-bot = "mcp_creature_bot.server:main"
-mcp-creature-bot-install = "mcp_creature_bot.scripts.install:main"
-mcp-creature-bot-uninstall = "mcp_creature_bot.scripts.uninstall:main"
+buddy = "buddy.server:main"
+buddy-install = "buddy.scripts.install:main"
+buddy-uninstall = "buddy.scripts.uninstall:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-mcp_creature_bot = ["sprites/*.txt", "commands/*.md"]
+buddy = ["sprites/*.txt", "commands/*.md"]

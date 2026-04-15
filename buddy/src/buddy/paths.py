@@ -1,10 +1,12 @@
-"""Filesystem layout for mcp-creature-bot state."""
+"""Filesystem layout for buddy state."""
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
-_ROOT_ENV = "MCP_CREATURE_BOT_ROOT"
+_ROOT_ENV = "BUDDY_ROOT"
+_LEGACY_DIR_NAME = "mcp-creature-bot"
+_CURRENT_DIR_NAME = "buddy"
 
 
 def root() -> Path:
@@ -12,7 +14,13 @@ def root() -> Path:
     if override:
         p = Path(override).expanduser()
     else:
-        p = Path.home() / ".claude" / "mcp-creature-bot"
+        claude = Path.home() / ".claude"
+        new = claude / _CURRENT_DIR_NAME
+        legacy = claude / _LEGACY_DIR_NAME
+        if not new.exists() and legacy.exists():
+            # One-time migration from the pre-rename state dir.
+            legacy.rename(new)
+        p = new
     p.mkdir(parents=True, exist_ok=True)
     return p
 

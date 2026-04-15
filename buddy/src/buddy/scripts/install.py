@@ -1,4 +1,4 @@
-"""Install mcp-creature-bot as a user-scope Claude Code integration.
+"""Install buddy as a user-scope Claude Code integration.
 
 Idempotent. Running it twice in a row is a no-op the second time.
 
@@ -51,12 +51,16 @@ LEGACY_SHIPPED_MARKERS: dict[str, list[str]] = {
 }
 
 HOOK_EVENTS = {
-    "Stop": "python3 -m mcp_creature_bot.hooks.on_stop",
-    "SessionStart": "python3 -m mcp_creature_bot.hooks.on_session_start",
-    "SessionEnd": "python3 -m mcp_creature_bot.hooks.on_session_end",
+    "Stop": "python3 -m buddy.hooks.on_stop",
+    "SessionStart": "python3 -m buddy.hooks.on_session_start",
+    "SessionEnd": "python3 -m buddy.hooks.on_session_end",
 }
 
-HOOK_MARKER = "mcp_creature_bot.hooks."
+HOOK_MARKER = "buddy.hooks."
+# Pre-rename marker: older installs wired hooks to the mcp_creature_bot module.
+# We strip those during install so the rename migration is seamless.
+LEGACY_HOOK_MARKER = "mcp_creature_bot.hooks."
+LEGACY_MCP_SERVER_NAME = "mcp-creature-bot"
 
 
 def _backup_settings() -> None:
@@ -104,7 +108,7 @@ def _link_commands() -> tuple[int, int, int, list[str]]:
     skipped = 0
     conflicts: list[str] = []
     use_copy_fallback = os.name == "nt"
-    pkg_commands = resources.files("mcp_creature_bot").joinpath("commands")
+    pkg_commands = resources.files("buddy").joinpath("commands")
     for entry in pkg_commands.iterdir():
         if not entry.name.endswith(".md"):
             continue
@@ -184,6 +188,41 @@ def _hook_command_present(event_entries: list, command: str) -> bool:
     return False
 
 
+def _strip_legacy_hooks(settings: dict) -> int:
+    """Remove hook entries that point at the pre-rename mcp_creature_bot module.
+
+    Returns the number of hook command entries pruned. Empty matcher entries
+    (those whose only hooks were legacy) are also removed.
+    """
+    hooks = settings.get("hooks")
+    if not isinstance(hooks, dict):
+        return 0
+    pruned = 0
+    for event, entries in list(hooks.items()):
+        if not isinstance(entries, list):
+            continue
+        new_entries: list = []
+        for matcher in entries:
+            if not isinstance(matcher, dict):
+                new_entries.append(matcher)
+                continue
+            kept_hooks = []
+            for hook in matcher.get("hooks", []):
+                cmd = hook.get("command", "") if isinstance(hook, dict) else ""
+                if LEGACY_HOOK_MARKER in cmd:
+                    pruned += 1
+                    continue
+                kept_hooks.append(hook)
+            if kept_hooks:
+                matcher["hooks"] = kept_hooks
+                new_entries.append(matcher)
+        if new_entries:
+            hooks[event] = new_entries
+        else:
+            del hooks[event]
+    return pruned
+
+
 def _merge_hooks(settings: dict) -> int:
     added = 0
     hooks = settings.setdefault("hooks", {})
@@ -211,17 +250,36 @@ def _merge_statusline(settings: dict) -> str:
     return "installed"
 
 
+def _deregister_legacy_mcp_server() -> None:
+    """Remove the pre-rename `mcp-creature-bot` user-scope MCP server, if present."""
+    if shutil.which("claude") is None:
+        return
+    check = subprocess.run(
+        ["claude", "mcp", "list"],
+        capture_output=True,
+        text=True,
+    )
+    if check.returncode != 0 or LEGACY_MCP_SERVER_NAME not in check.stdout:
+        return
+    subprocess.run(
+        ["claude", "mcp", "remove", "--scope", "user", LEGACY_MCP_SERVER_NAME],
+        capture_output=True,
+        text=True,
+    )
+    print(f"  removed legacy MCP server registration: {LEGACY_MCP_SERVER_NAME}")
+
+
 def _register_mcp_server() -> str:
-    """Register mcp-creature-bot as a user-scope MCP server via the `claude` CLI.
+    """Register buddy as a user-scope MCP server via the `claude` CLI.
 
     Returns a short status string for the summary line.
     """
     if shutil.which("claude") is None:
         return (
             "WARNING — claude CLI not found on PATH; MCP server NOT registered.\n"
-            "    Install Claude Code, then re-run `mcp-creature-bot-install` to finish wiring this up.\n"
+            "    Install Claude Code, then re-run `buddy-install` to finish wiring this up.\n"
             "    (Or register manually:"
-            " claude mcp add --scope user mcp-creature-bot -- python3 -m mcp_creature_bot.server)"
+            " claude mcp add --scope user buddy -- python3 -m buddy.server)"
         )
 
     check = subprocess.run(
@@ -229,16 +287,17 @@ def _register_mcp_server() -> str:
         capture_output=True,
         text=True,
     )
-    if check.returncode == 0 and "mcp-creature-bot" in check.stdout:
+    if check.returncode == 0 and "buddy" in check.stdout.split():
+        # `.split()` avoids matching `buddy` as a substring of something else.
         return "already registered (user scope)"
 
     result = subprocess.run(
         [
             "claude", "mcp", "add",
             "--scope", "user",
-            "mcp-creature-bot",
+            "buddy",
             "--",
-            "python3", "-m", "mcp_creature_bot.server",
+            "python3", "-m", "buddy.server",
         ],
         capture_output=True,
         text=True,
@@ -249,7 +308,7 @@ def _register_mcp_server() -> str:
 
 
 def main() -> int:
-    print("installing mcp-creature-bot…")
+    print("installing buddy…")
 
     # 1. Commands
     linked, migrated, skipped, conflicts = _link_commands()
@@ -270,6 +329,10 @@ def main() -> int:
     CLAUDE_SETTINGS.parent.mkdir(parents=True, exist_ok=True)
     settings = _load_settings()
     before = json.dumps(settings, sort_keys=True)
+
+    pruned = _strip_legacy_hooks(settings)
+    if pruned:
+        print(f"  legacy hooks: pruned {pruned} stale mcp_creature_bot entries")
 
     added = _merge_hooks(settings)
     statusline_status = _merge_statusline(settings)
@@ -295,7 +358,8 @@ def main() -> int:
             file=sys.stderr,
         )
 
-    # 3. MCP server registration
+    # 3. MCP server registration (and clean up the old name if present)
+    _deregister_legacy_mcp_server()
     print(f"  mcp server: {_register_mcp_server()}")
 
     print("done.")

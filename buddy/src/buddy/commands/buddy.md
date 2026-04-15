@@ -1,10 +1,10 @@
 ---
 description: Interact with your RPG buddy (status, start/stop/refresh sidebar, allocate stats, quest, claim, rename, uninstall).
 argument-hint: [start|stop|refresh|allocate|quest|claim|rename|uninstall] [args…]
-allowed-tools: Bash(python3 -m mcp_creature_bot.scripts.uninstall:*)
+allowed-tools: Bash(python3 -m buddy.scripts.uninstall:*)
 ---
 
-Parse `$ARGUMENTS`. The first token is the subcommand; anything after it is subcommand args. Treat empty arguments and `status` as the same thing. All MCP tools below live on the `mcp-creature-bot` server.
+Parse `$ARGUMENTS`. The first token is the subcommand; anything after it is subcommand args. Treat empty arguments and `status` as the same thing. All MCP tools below live on the `buddy` server.
 
 ### (empty) or `status`
 
@@ -67,7 +67,7 @@ Call `rename_buddy` with `name=` the trimmed remaining args. If no name was give
 Run:
 
 ```bash
-python3 -m mcp_creature_bot.scripts.uninstall
+python3 -m buddy.scripts.uninstall
 ```
 
-Then explain to the user what it did: removed the user-scope MCP server registration, deleted the bundled `/buddy` command from `~/.claude/commands/`, reverted the statusLine, deleted state under `~/.claude/mcp-creature-bot/`, and killed any running sidecar panes. The Python package itself is still installed — they can `pip uninstall mcp-creature-bot` to remove it entirely.
+Then explain to the user what it did: removed the user-scope MCP server registration, deleted the bundled `/buddy` command from `~/.claude/commands/`, reverted the statusLine, deleted state under `~/.claude/buddy/`, and killed any running sidecar panes. The Python package itself is still installed — they can `brew uninstall buddy` to remove it entirely.

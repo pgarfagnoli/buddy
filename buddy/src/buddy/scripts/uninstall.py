@@ -1,4 +1,4 @@
-"""Remove mcp-creature-bot state and reverse everything `install` did.
+"""Remove buddy state and reverse everything `install` did.
 
 Mirrors `install.py`:
   1. Deregister the user-scope MCP server via the `claude` CLI
@@ -7,9 +7,9 @@ Mirrors `install.py`:
   4. Delete bundled /buddy* commands from ~/.claude/commands/ (only files that
      still match what we ship — user edits are left alone)
   5. Kill any running sidecar panes
-  6. Delete the state root (~/.claude/mcp-creature-bot/)
+  6. Delete the state root (~/.claude/buddy/)
 
-The Python package itself stays installed — `pip uninstall mcp-creature-bot`
+The Python package itself stays installed — `brew uninstall buddy`
 removes it entirely.
 """
 from __future__ import annotations
@@ -24,8 +24,16 @@ from importlib import resources
 from pathlib import Path
 
 from .. import paths
-from .install import COMMANDS_DIR, HOOK_EVENTS, OBSOLETE_COMMANDS
+from .install import (
+    COMMANDS_DIR,
+    HOOK_EVENTS,
+    LEGACY_HOOK_MARKER,
+    LEGACY_MCP_SERVER_NAME,
+    OBSOLETE_COMMANDS,
+)
 from .install_statusline import CLAUDE_SETTINGS, MARKER_COMMAND
+
+MCP_SERVER_NAME = "buddy"
 
 
 def _kill_running_panes() -> int:
@@ -50,23 +58,29 @@ def _kill_running_panes() -> int:
 
 
 def _remove_hooks(settings: dict) -> int:
+    """Remove both current `buddy.hooks.*` entries and any legacy
+    `mcp_creature_bot.hooks.*` entries that older installs left behind."""
     removed = 0
     hooks = settings.get("hooks")
     if not isinstance(hooks, dict):
         return 0
-    for event, command in HOOK_EVENTS.items():
-        entries = hooks.get(event)
+    current_commands = set(HOOK_EVENTS.values())
+    for event, entries in list(hooks.items()):
         if not isinstance(entries, list):
             continue
         kept = []
         for matcher in entries:
             inner = matcher.get("hooks", [])
-            filtered = [
-                h for h in inner
-                if not (h.get("type") == "command" and h.get("command") == command)
-            ]
+            filtered = []
+            for h in inner:
+                cmd = h.get("command", "") if isinstance(h, dict) else ""
+                is_current = h.get("type") == "command" and cmd in current_commands
+                is_legacy = LEGACY_HOOK_MARKER in cmd
+                if is_current or is_legacy:
+                    continue
+                filtered.append(h)
             if len(filtered) != len(inner):
-                removed += 1
+                removed += len(inner) - len(filtered)
             if filtered:
                 matcher["hooks"] = filtered
                 kept.append(matcher)
@@ -111,7 +125,7 @@ def _remove_commands() -> int:
     if not COMMANDS_DIR.exists():
         return 0
     removed = 0
-    pkg_commands = resources.files("mcp_creature_bot").joinpath("commands")
+    pkg_commands = resources.files("buddy").joinpath("commands")
     shipped = {entry.name: entry.read_text() for entry in pkg_commands.iterdir() if entry.name.endswith(".md")}
     for name, source_text in shipped.items():
         target = COMMANDS_DIR / name
@@ -144,21 +158,22 @@ def _remove_commands() -> int:
 
 def _deregister_mcp_server() -> None:
     if shutil.which("claude") is None:
-        print("claude CLI not found; skip `claude mcp remove --scope user mcp-creature-bot` yourself")
+        print(f"claude CLI not found; skip `claude mcp remove --scope user {MCP_SERVER_NAME}` yourself")
         return
-    result = subprocess.run(
-        ["claude", "mcp", "remove", "--scope", "user", "mcp-creature-bot"],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode == 0:
-        print("deregistered user-scope MCP server")
-    else:
-        stderr = result.stderr.strip()
-        if "not found" in stderr.lower() or "no such" in stderr.lower():
-            print("no user-scope MCP server registered (nothing to remove)")
+    # Remove both current and legacy server names so reinstalls / partial
+    # upgrades leave no stale registrations behind.
+    for name in (MCP_SERVER_NAME, LEGACY_MCP_SERVER_NAME):
+        result = subprocess.run(
+            ["claude", "mcp", "remove", "--scope", "user", name],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            print(f"deregistered user-scope MCP server: {name}")
         else:
-            print(f"warning: `claude mcp remove` failed: {stderr or result.stdout.strip()}", file=sys.stderr)
+            stderr = result.stderr.strip()
+            if "not found" not in stderr.lower() and "no such" not in stderr.lower():
+                print(f"warning: `claude mcp remove {name}` failed: {stderr or result.stdout.strip()}", file=sys.stderr)
 
 
 def main() -> int:
@@ -178,7 +193,7 @@ def main() -> int:
         shutil.rmtree(root)
         print(f"removed {root}")
 
-    print("done. Run `pip uninstall mcp-creature-bot` to remove the package itself.")
+    print("done. Run `brew uninstall buddy` to remove the package itself.")
     return 0
 
 
