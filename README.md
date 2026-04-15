@@ -6,11 +6,11 @@ A Homebrew tap hosting [`mcp-creature-bot`](./mcp-creature-bot/) — an RPG budd
 
 ```bash
 brew tap pgarfagnoli/buddy
-brew install mcp-creature-bot
+brew install buddy
 mcp-creature-bot-install
 ```
 
-`brew install` puts the Python package and its CLI entry points into a Homebrew-managed virtualenv. `mcp-creature-bot-install` wires everything up at user scope: registers the MCP server, drops `/buddy*` slash commands into `~/.claude/commands/`, merges hooks into `~/.claude/settings.json`, and installs the buddy statusLine.
+`brew install buddy` puts the Python package (`mcp-creature-bot`) and its CLI entry points into a Homebrew-managed virtualenv, and pulls in `tmux` automatically if it isn't already installed. `mcp-creature-bot-install` then wires everything up at user scope: registers the MCP server, drops `/buddy*` slash commands into `~/.claude/commands/`, merges hooks into `~/.claude/settings.json`, and installs the buddy statusLine.
 
 See [`mcp-creature-bot/README.md`](./mcp-creature-bot/README.md) for the full feature list, usage, and architecture notes.
 
@@ -18,7 +18,7 @@ See [`mcp-creature-bot/README.md`](./mcp-creature-bot/README.md) for the full fe
 
 ```bash
 mcp-creature-bot-uninstall
-brew uninstall mcp-creature-bot
+brew uninstall buddy
 brew untap pgarfagnoli/buddy
 ```
 
@@ -27,7 +27,7 @@ brew untap pgarfagnoli/buddy
 ```
 homebrew-buddy/
 ├── Formula/
-│   └── mcp-creature-bot.rb    ← Homebrew formula
+│   └── buddy.rb                ← Homebrew formula (installs as `brew install buddy`)
 └── mcp-creature-bot/           ← Python package source
     ├── pyproject.toml
     ├── src/mcp_creature_bot/

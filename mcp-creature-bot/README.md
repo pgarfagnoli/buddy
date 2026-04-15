@@ -16,7 +16,7 @@ An RPG buddy for Claude Code. A Pokemon-style ASCII creature lives in a tmux sid
 
 ## Install
 
-End users: `brew install pgarfagnoli/buddy/mcp-creature-bot` (see the repo root README for tap instructions).
+End users: `brew install pgarfagnoli/buddy/buddy` (see the repo root README for tap instructions).
 
 For development from source, two commands from this subfolder:
 

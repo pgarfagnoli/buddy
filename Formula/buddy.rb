@@ -1,4 +1,4 @@
-class McpCreatureBot < Formula
+class Buddy < Formula
   include Language::Python::Virtualenv
 
   desc "RPG buddy for Claude Code — ASCII companion that gains XP from your prompts"
