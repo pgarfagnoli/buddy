@@ -4,7 +4,7 @@ class McpCreatureBot < Formula
   desc "RPG buddy for Claude Code — ASCII companion that gains XP from your prompts"
   homepage "https://github.com/pgarfagnoli/homebrew-buddy"
   url "https://github.com/pgarfagnoli/homebrew-buddy/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "TODO_FILL_AFTER_TAG"
+  sha256 "09811181473ad198b8af71214759f0e1d87ca62eb933cc1ecebee6961eeaf47a"
   license "MIT"
 
   depends_on "python@3.12"
