@@ -218,8 +218,10 @@ def _register_mcp_server() -> str:
     """
     if shutil.which("claude") is None:
         return (
-            "claude CLI not found on PATH — skipped. Run this yourself:\n"
-            "    claude mcp add --scope user mcp-creature-bot -- python3 -m mcp_creature_bot.server"
+            "WARNING — claude CLI not found on PATH; MCP server NOT registered.\n"
+            "    Install Claude Code, then re-run `mcp-creature-bot-install` to finish wiring this up.\n"
+            "    (Or register manually:"
+            " claude mcp add --scope user mcp-creature-bot -- python3 -m mcp_creature_bot.server)"
         )
 
     check = subprocess.run(

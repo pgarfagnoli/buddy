@@ -376,13 +376,14 @@ SPECIES: dict[str, Species] = {
         base_hp=13, base_atk=6, base_def=7, base_spd=8, base_luck=10,
         blurb="A cheek-stuffing strategist. Hoards its luck.",
         evolutions=(Evolution("marmot", (), _TIER_2_BONUS),),
+        inherent_skills=("treasure_sense",),
         sprite_fallback="squirrel", is_starter=False, evolves_at=TIER_2_LEVEL,
     ),
     "porcupine": Species(
         id="porcupine", display_name="Porcupine", kind="beast",
         base_hp=15, base_atk=7, base_def=13, base_spd=4, base_luck=6,
         blurb="A rolling pincushion. Touch at your peril.",
-        evolutions=(Evolution("pangolin", (), _TIER_2_BONUS),),
+        evolutions=(Evolution("pangolin", (), _TIER_2_BONUS, grants_skill="hearty"),),
         sprite_fallback="hedgehog", is_starter=False, evolves_at=TIER_2_LEVEL,
     ),
     "echidna": Species(

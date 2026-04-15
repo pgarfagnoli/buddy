@@ -13,11 +13,12 @@ import random
 import shutil
 import signal
 import sys
+import textwrap
 import time
 import traceback
 from typing import Optional
 
-from . import leveling, paths, quests, skills, species
+from . import combat, leveling, paths, personalities, quests, skills, species
 from .state import State, drain_xp_log, load_state, mutate_state
 
 _LOGGED_EXC_SIGS: set[str] = set()
@@ -97,6 +98,19 @@ def _fmt_duration(seconds: int) -> str:
     return f"{m:d}:{s:02d}"
 
 
+def _wrap_plain(text: str, width: int) -> list[str]:
+    """Wrap plain (no-ANSI) text to `width`, returning at least one line."""
+    if width <= 0:
+        return [text]
+    lines = textwrap.wrap(
+        text,
+        width=width,
+        break_long_words=True,
+        break_on_hyphens=True,
+    )
+    return lines or [text]
+
+
 class FlavorTicker:
     def __init__(self, capacity: int = 5) -> None:
         self.lines: list[str] = []
@@ -161,34 +175,45 @@ def _render(state: State, ticker: FlavorTicker, tick: int, cols: int, rows: int)
     mythic_flash = BOLD + FG_MAGENTA + " ★" + RESET if b.mythic else ""
     out.append(f"  {BOLD}{b.name}{RESET}  Lv{b.level}{stat_flash}{evo_flash}{mythic_flash}\n")
     display_name = b.mythic.display_name if b.mythic else sp.display_name
-    out.append(f"  {DIM}{display_name}{RESET}\n\n")
+    personality_def = personalities.PERSONALITIES.get(b.personality)
+    display_plain = display_name
+    if personality_def:
+        display_plain = f"{display_name}  ({personality_def.display_name})"
+    display_budget = max(1, cols - 2)
+    for piece in _wrap_plain(display_plain, display_budget):
+        out.append(f"  {DIM}{piece}{RESET}\n")
+    out.append("\n")
 
-    # HP + MP + XP bars
-    out.append(f"  HP {_bar(b.current_hp, b.max_hp, color=FG_RED)}\n")
-    out.append(f"     {DIM}{b.current_hp}/{b.max_hp}{RESET}\n")
-    out.append(f"  MP {_bar(b.current_mana, b.max_mana, color=FG_BLUE)}\n")
-    out.append(f"     {DIM}{b.current_mana}/{b.max_mana}{RESET}\n")
+    # Status bars, two per row
+    bar_w = 10
     xp_cap = leveling.xp_to_next(b.level, species.get_tier(b.species))
-    out.append(f"  XP {_bar(b.xp, xp_cap, color=FG_GREEN)}\n")
-    out.append(f"     {DIM}{b.xp}/{xp_cap}{RESET}\n")
-    # Mood + Stamina bars
-    out.append(f"  MD {_bar(b.mood, b.max_mood, color=FG_MAGENTA)}\n")
-    out.append(f"     {DIM}{b.mood}/{b.max_mood}{RESET}\n")
-    out.append(f"  ST {_bar(b.stamina, b.max_stamina, color=FG_CYAN)}\n")
-    out.append(f"     {DIM}{b.stamina}/{b.max_stamina}{RESET}\n\n")
+    cells: list[tuple[str, str]] = []
+    for label, cur, maximum, color in (
+        ("HP", b.current_hp, b.max_hp, FG_RED),
+        ("MP", b.current_mana, b.max_mana, FG_BLUE),
+        ("XP", b.xp, xp_cap, FG_GREEN),
+        ("MD", b.mood, b.max_mood, FG_MAGENTA),
+        ("ST", b.stamina, b.max_stamina, FG_CYAN),
+    ):
+        bar = _bar(cur, maximum, width=bar_w, color=color)
+        val_text = f"{cur}/{maximum}"
+        visible_w = 3 + bar_w  # "HP " + bar
+        top = f"{label} {bar}"
+        val = f"   {DIM}{val_text}{RESET}" + " " * max(0, visible_w - 3 - len(val_text))
+        cells.append((top, val))
+    gap = "  "
+    empty_top = " " * (3 + bar_w)
+    for i in range(0, len(cells), 2):
+        left_top, left_val = cells[i]
+        right_top, right_val = cells[i + 1] if i + 1 < len(cells) else (empty_top, empty_top)
+        out.append(f"  {left_top}{gap}{right_top}\n")
+        out.append(f"  {left_val}{gap}{right_val}\n")
+    out.append("\n")
 
     s = b.stats
     out.append(f"  {DIM}ATK{RESET} {s.atk:<3} {DIM}DEF{RESET} {s.def_:<3}\n")
     out.append(f"  {DIM}SPD{RESET} {s.spd:<3} {DIM}LCK{RESET} {s.luck:<3}\n")
     out.append(f"  {DIM}INT{RESET} {s.int_:<3} {DIM}RES{RESET} {s.res:<3}\n")
-    # Traits line — only rendered when the buddy has personality set
-    traits = b.traits or {}
-    if traits:
-        out.append(
-            f"  {DIM}cur{RESET} {traits.get('curiosity', 5):<2} "
-            f"{DIM}bld{RESET} {traits.get('boldness', 5):<2} "
-            f"{DIM}pat{RESET} {traits.get('patience', 5):<2}\n"
-        )
     # Active skills — dim if mana can't cover the cost.
     if b.active_skills:
         out.append(f"\n  {BOLD}SKILLS{RESET}\n")
@@ -208,18 +233,47 @@ def _render(state: State, ticker: FlavorTicker, tick: int, cols: int, rows: int)
         try:
             qdef = quests.get(b.quest.id)
             remaining = b.quest.remaining()
+            header_budget = max(1, cols - 4)
             if remaining > 0:
                 spinner = "|/-\\"[tick % 4]
-                out.append(f"  {BOLD}{FG_CYAN}{spinner} {qdef.name}{RESET}\n")
+                wrapped_name = _wrap_plain(qdef.name, header_budget)
+                out.append(f"  {BOLD}{FG_CYAN}{spinner} {wrapped_name[0]}{RESET}\n")
+                for piece in wrapped_name[1:]:
+                    out.append(f"    {BOLD}{FG_CYAN}{piece}{RESET}\n")
                 out.append(f"  {DIM}time left: {_fmt_duration(remaining)}{RESET}\n\n")
             else:
-                out.append(f"  {BOLD}{FG_GREEN}✓ {qdef.name} done!{RESET}\n")
+                wrapped_name = _wrap_plain(qdef.name, header_budget)
+                out.append(f"  {BOLD}{FG_GREEN}✓ {wrapped_name[0]}{RESET}\n")
+                for piece in wrapped_name[1:]:
+                    out.append(f"    {BOLD}{FG_GREEN}{piece}{RESET}\n")
+                out.append(f"  {BOLD}{FG_GREEN}  done!{RESET}\n")
                 out.append(f"  {DIM}/buddy claim to{RESET}\n")
                 out.append(f"  {DIM}collect reward{RESET}\n\n")
-            for line in ticker.lines[-3:]:
-                if len(line) > cols - 4:
-                    line = line[: cols - 5] + "…"
-                out.append(f"  {DIM}· {line}{RESET}\n")
+            flavor_budget = max(1, cols - 4)
+            if b.combat is not None:
+                try:
+                    enemy = combat.get_enemy(b.combat.enemy_id)
+                    ebar = _bar(b.combat.enemy_hp, b.combat.enemy_max_hp, width=10, color=FG_RED)
+                    out.append(
+                        f"  {BOLD}{FG_RED}⚔ {enemy.glyph} {enemy.name}{RESET}\n"
+                    )
+                    out.append(
+                        f"  HP {ebar} {DIM}{b.combat.enemy_hp}/{b.combat.enemy_max_hp}{RESET}\n\n"
+                    )
+                    for line in b.combat.log[-4:]:
+                        for i, piece in enumerate(_wrap_plain(line, flavor_budget)):
+                            marker = "· " if i == 0 else "  "
+                            out.append(f"  {DIM}{marker}{piece}{RESET}\n")
+                except KeyError:
+                    out.append(f"  {DIM}· combat underway{RESET}\n")
+            else:
+                if qdef.category == "combat" and qdef.hp_penalty_pct_on_failure > 0:
+                    out.append(f"  {DIM}· scouting for trouble…{RESET}\n")
+                for line in ticker.lines[-3:]:
+                    wrapped = _wrap_plain(line, flavor_budget)
+                    for i, piece in enumerate(wrapped):
+                        marker = "· " if i == 0 else "  "
+                        out.append(f"  {DIM}{marker}{piece}{RESET}\n")
         except Exception as exc:
             _log_pane_exception("render.quest", exc)
             remaining = b.quest.remaining()
@@ -234,10 +288,10 @@ def _render(state: State, ticker: FlavorTicker, tick: int, cols: int, rows: int)
     # recent events (level-ups, etc.)
     if state.recent_events:
         out.append("\n" + DIM + "─── log ".ljust(cols, "─") + RESET + "\n")
+        event_budget = max(1, cols - 2)
         for line in state.recent_events[-2:]:
-            if len(line) > cols - 2:
-                line = line[: cols - 3] + "…"
-            out.append(f"  {DIM}{line}{RESET}\n")
+            for piece in _wrap_plain(line, event_budget):
+                out.append(f"  {DIM}{piece}{RESET}\n")
 
     return "".join(out)
 
@@ -260,6 +314,53 @@ def _drain_and_apply() -> None:
         pass
 
 
+def _advance_combat(rng: random.Random) -> None:
+    """Spawn or tick a combat encounter for the active quest, if any."""
+    def fn(state: State) -> None:
+        b = state.buddy
+        if b is None or b.quest is None:
+            return
+        try:
+            qdef = quests.get(b.quest.id)
+        except KeyError:
+            return
+        now = int(time.time())
+        if b.combat is None:
+            # Hearty: regen a point of HP between encounters on combat quests.
+            if qdef.category == "combat":
+                skills.try_out_of_combat_regen(b)
+            combat.try_spawn(b, qdef, now, rng)
+            return
+        result = combat.tick_encounter(b, qdef, now, rng)
+        if result == combat.TickResult.BUDDY_DOWN:
+            try:
+                res = quests.fail_from_combat(b, rng)
+            except ValueError:
+                return
+            hints: list[str] = [f"~{int(round(res.probability * 100))}% odds"]
+            if res.weakest_stat:
+                hints.append(f"{res.weakest_stat.rstrip('_')} was weakest")
+            fired_names: list[str] = []
+            for sid in res.fired_skills:
+                try:
+                    fired_names.append(skills.get(sid).name)
+                except KeyError:
+                    fired_names.append(sid)
+            line = f"{res.flavor} [{', '.join(hints)}]"
+            line += f" (+{res.xp} xp"
+            if res.hp_damage:
+                line += f", -{res.hp_damage} hp"
+            if fired_names:
+                line += f", used {', '.join(fired_names)}"
+            line += ")"
+            state.add_event(line)
+            leveling.check_level_ups(state)
+    try:
+        mutate_state(fn)
+    except Exception as exc:
+        _log_pane_exception("advance_combat", exc)
+
+
 def main() -> int:
     signal.signal(signal.SIGTERM, _sigterm_handler)
     signal.signal(signal.SIGINT, _sigterm_handler)
@@ -277,6 +378,7 @@ def main() -> int:
         while True:
             try:
                 _drain_and_apply()
+                _advance_combat(ticker.rng)
                 try:
                     state = load_state()
                 except Exception:

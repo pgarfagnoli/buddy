@@ -396,10 +396,49 @@ def get_zone(zone_id: str) -> Zone:
     return ZONES[zone_id]
 
 
+_FAIL_OUTROS: tuple[str, ...] = (
+    "limped back empty-pawed",
+    "retreated before things got worse",
+    "called it a day and turned home",
+    "gave up with a frustrated huff",
+    "trudged back with nothing to show for it",
+)
+
+
+def _stat_score(buddy: Buddy, qdef: QuestDef) -> float:
+    """Normalized relevant-stat score — matches the per-stat average used
+    inside `_success_probability` (pre-skill bonuses)."""
+    relevant = sum(getattr(buddy.stats, k) for k in qdef.key_stats)
+    return relevant / max(1, len(qdef.key_stats))
+
+
+def _weakest_key_stat(buddy: Buddy, qdef: QuestDef) -> Optional[str]:
+    """Return the key_stat with the lowest raw buddy value, or None when the
+    quest only has one key stat (no bottleneck worth reporting)."""
+    if len(qdef.key_stats) < 2:
+        return None
+    return min(qdef.key_stats, key=lambda k: getattr(buddy.stats, k))
+
+
+def _build_fail_narrative(
+    buddy: Buddy, qdef: QuestDef, rng: random.Random,
+) -> list[str]:
+    """Pick 2 distinct mid-quest beats from qdef.flavor and append a retreat
+    outro. Returns at most 3 lines; falls back gracefully when the flavor
+    pool is empty or tiny.
+    """
+    pool = list(qdef.flavor) if qdef.flavor else []
+    rng.shuffle(pool)
+    picks = pool[:2]
+    lines = [f"{buddy.name} {p}" for p in picks]
+    lines.append(f"{buddy.name} {rng.choice(_FAIL_OUTROS)}.")
+    return lines
+
+
 def _success_probability(buddy: Buddy, qdef: QuestDef) -> float:
     relevant = sum(getattr(buddy.stats, k) for k in qdef.key_stats)
     # Normalize by number of key stats so high-diff quests with more stats aren't doubly-penalized.
-    score = relevant / max(1, len(qdef.key_stats))
+    score = relevant / max(1, len(qdef.key_stats)) + skills.flat_score_bonus(buddy, qdef)
     p = 0.5 + (score - qdef.difficulty) / 40
     return max(0.1, min(0.95, p))
 
@@ -583,6 +622,13 @@ class QuestResult:
     mana_cost: int = 0
     mana_cast: bool = False
     fired_skills: list[str] = field(default_factory=list)
+    probability: float = 0.0
+    difficulty: int = 0
+    stat_score: float = 0.0
+    weakest_stat: Optional[str] = None
+    fail_narrative: list[str] = field(default_factory=list)
+    combat_log: list[str] = field(default_factory=list)
+    defeated_by: Optional[str] = None
 
 
 def _fire_skills(
@@ -609,6 +655,10 @@ def _fire_skills(
             s = skills.get(sid)
         except KeyError:
             continue
+        # Only claim-time triggers run through this dispatch; the new
+        # live-combat triggers are read directly by combat.py.
+        if s.trigger not in ("on_claim", "on_success", "on_failure"):
+            continue
         if s.trigger != trigger:
             continue
         if buddy.current_mana < s.mana_cost:
@@ -624,6 +674,14 @@ def _fire_skills(
             ctx["dmg"] = ctx.get("dmg", 0) * (100 - s.magnitude) // 100
         elif s.effect == "extra_loot_roll":
             if qdef is not None and qdef.items_on_success:
+                for _ in range(s.magnitude):
+                    ctx.setdefault("items", []).append(r.choice(list(qdef.items_on_success)))
+        elif s.effect == "gathering_extra_item":
+            if (
+                qdef is not None
+                and qdef.category == "gathering"
+                and qdef.items_on_success
+            ):
                 for _ in range(s.magnitude):
                     ctx.setdefault("items", []).append(r.choice(list(qdef.items_on_success)))
         else:
@@ -654,17 +712,21 @@ def claim(buddy: Buddy, rng: Optional[random.Random] = None) -> QuestResult:
         buddy.current_mana -= MANA_CAST_COST
         mana_cost = MANA_CAST_COST
         p = min(0.95, p + MANA_BOOST)
+    score = _stat_score(buddy, qdef)
+    weakest = _weakest_key_stat(buddy, qdef)
     success = r.random() < p
     if success:
         xp = r.randint(*qdef.xp_success_range)
         items = list(qdef.items_on_success)
         dmg = 0
         flavor = f"{buddy.name} triumphs at {qdef.name}!"
+        narrative: list[str] = []
     else:
         xp = qdef.xp_failure
         items = []
         dmg = int(buddy.stats.hp * qdef.hp_penalty_pct_on_failure / 100)
         flavor = f"{buddy.name} struggled and retreated from {qdef.name}."
+        narrative = _build_fail_narrative(buddy, qdef, r)
 
     # Post-roll skill pass (bonus_xp_pct, heal_pct, reduce_damage_pct, extra_loot_roll).
     post_ctx: dict = {"xp": xp, "items": items, "dmg": dmg}
@@ -697,6 +759,70 @@ def claim(buddy: Buddy, rng: Optional[random.Random] = None) -> QuestResult:
         success=success, xp=xp, items=items, hp_damage=dmg, flavor=flavor,
         mana_cost=mana_cost, mana_cast=mana_cast,
         fired_skills=fired_pre + fired_post,
+        probability=round(p, 3),
+        difficulty=qdef.difficulty,
+        stat_score=round(score, 2),
+        weakest_stat=weakest,
+        fail_narrative=narrative,
+    )
+
+
+def fail_from_combat(buddy: Buddy, rng: Optional[random.Random] = None) -> QuestResult:
+    """Force-fail the active quest because the buddy lost a combat encounter.
+
+    Mirrors the failure branch of `claim()` but bypasses the timer check, so
+    it can be invoked the moment the buddy retreats from a fight. Fires the
+    normal on_failure skill pass (iron_skin, second_wind, etc.) and clears
+    both `buddy.quest` and any lingering `buddy.combat`.
+    """
+    if buddy.quest is None:
+        raise ValueError("no active quest")
+    qdef = get(buddy.quest.id)
+    r = rng or random
+
+    # Snapshot the fight transcript before we clear buddy.combat.
+    captured_log: list[str] = []
+    defeated_by: Optional[str] = None
+    if buddy.combat is not None:
+        captured_log = list(buddy.combat.log)
+        try:
+            from . import combat as combat_mod  # deferred to break the cycle
+            defeated_by = combat_mod.get_enemy(buddy.combat.enemy_id).name
+        except (KeyError, ImportError):
+            pass
+
+    xp = qdef.xp_failure
+    dmg = int(buddy.stats.hp * qdef.hp_penalty_pct_on_failure / 100)
+    if defeated_by:
+        flavor = f"{buddy.name} was overwhelmed by a {defeated_by} during {qdef.name}."
+    else:
+        flavor = f"{buddy.name} was overwhelmed during {qdef.name}."
+
+    post_ctx: dict = {"xp": xp, "items": [], "dmg": dmg}
+    fired = _fire_skills(buddy, "on_failure", post_ctx, qdef=qdef, rng=r)
+    xp = post_ctx["xp"]
+    dmg = post_ctx["dmg"]
+
+    buddy.xp += xp
+    if dmg:
+        buddy.current_hp = max(1, buddy.current_hp - dmg)
+    buddy.mood = _clamp_int(
+        buddy.mood + mood_delta_on_claim(buddy, qdef, success=False),
+        0, buddy.max_mood,
+    )
+    buddy.quest = None
+    buddy.combat = None
+
+    p = _success_probability(buddy, qdef)
+    return QuestResult(
+        success=False, xp=xp, items=[], hp_damage=dmg, flavor=flavor,
+        fired_skills=fired,
+        probability=round(p, 3),
+        difficulty=qdef.difficulty,
+        stat_score=round(_stat_score(buddy, qdef), 2),
+        weakest_stat=_weakest_key_stat(buddy, qdef),
+        combat_log=captured_log,
+        defeated_by=defeated_by,
     )
 
 

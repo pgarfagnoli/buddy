@@ -6,19 +6,20 @@ mutate_state exclusive section so writes can't race.
 """
 from __future__ import annotations
 
+import json
 import os
 import random
 import shutil
 import signal
 import subprocess
 import sys
-from typing import Any
+from typing import Any, Optional
 
 from mcp.server.fastmcp import FastMCP
 
 import time
 
-from . import leveling, panes, paths, quests, skills, species
+from . import leveling, panes, paths, personalities, quests, skills, species
 from .state import (
     Buddy,
     MythicOverlay,
@@ -49,13 +50,22 @@ def _require_buddy(state: State) -> Buddy:
 
 def _snapshot(state: State) -> dict[str, Any]:
     if state.buddy is None:
-        return {"buddy": None, "recent_events": list(state.recent_events)}
+        return {
+            "buddy": None,
+            "recent_events": list(state.recent_events),
+            "activity_loop": _loop_health(state),
+        }
     b = state.buddy
     bd = _buddy_to_dict(b)
     bd["max_hp"] = b.max_hp
     bd["max_mana"] = b.max_mana
     bd["xp_to_next"] = leveling.xp_to_next(b.level, species.get_tier(b.species))
     bd["traits"] = dict(b.traits)
+    bd["personality_display"] = (
+        personalities.PERSONALITIES[b.personality].display_name
+        if b.personality in personalities.PERSONALITIES
+        else ""
+    )
     if b.quest:
         qdef = quests.get(b.quest.id)
         bd["quest"] = {
@@ -110,7 +120,11 @@ def _snapshot(state: State) -> dict[str, Any]:
             "cap_total": 40,
             "cap_per_stat": 15,
         }
-    return {"buddy": bd, "recent_events": list(state.recent_events[-5:])}
+    return {
+        "buddy": bd,
+        "recent_events": list(state.recent_events[-5:]),
+        "activity_loop": _loop_health(state),
+    }
 
 
 # ─── tools ──────────────────────────────────────────────────────────────────
@@ -216,8 +230,9 @@ def list_species() -> list[dict[str, Any]]:
 def choose_buddy(species_id: str, name: str) -> dict[str, Any]:
     """Pick a starter species and name it. Fails if a buddy already exists."""
     sp = species.get(species_id)  # raises KeyError if invalid
+    name = name.strip()
     if not name or len(name) > 20:
-        raise ValueError("name must be 1-20 chars")
+        raise ValueError("name must be 1-20 non-whitespace chars")
     events = drain_xp_log()
 
     def fn(state: State) -> None:
@@ -226,20 +241,21 @@ def choose_buddy(species_id: str, name: str) -> dict[str, Any]:
         stats = Stats(hp=sp.base_hp, atk=sp.base_atk, def_=sp.base_def,
                       spd=sp.base_spd, luck=sp.base_luck,
                       int_=5, res=5)
-        traits = {
-            k: max(0, min(10, 5 + random.randint(-2, 2) + sp.trait_bias.get(k, 0)))
-            for k in ("curiosity", "boldness", "patience")
-        }
+        personality = personalities.roll_for_species(sp.id, random.Random())
+        traits = dict(personality.traits)
         max_mood = 80 + 2 * traits["curiosity"]
         max_stamina = 80 + 2 * traits["patience"]
         state.buddy = Buddy(
             species=sp.id, name=name, stats=stats,
             current_hp=sp.base_hp, traits=traits,
+            personality=personality.id,
             mood=max_mood, max_mood=max_mood,
             stamina=max_stamina, max_stamina=max_stamina,
             current_mana=5 + stats.int_ * 2,
         )
-        state.add_event(f"chose {name} the {sp.display_name}!")
+        state.add_event(
+            f"chose {name} the {personality.display_name} {sp.display_name}!"
+        )
         newly = skills.check_and_grant_skills(state.buddy)
         for sid in newly:
             try:
@@ -256,8 +272,9 @@ def choose_buddy(species_id: str, name: str) -> dict[str, Any]:
 @mcp.tool()
 def rename_buddy(name: str) -> dict[str, Any]:
     """Rename the current buddy."""
+    name = name.strip()
     if not name or len(name) > 20:
-        raise ValueError("name must be 1-20 chars")
+        raise ValueError("name must be 1-20 non-whitespace chars")
     events = drain_xp_log()
 
     def fn(state: State) -> None:
@@ -514,6 +531,11 @@ def start_quest(zone_id: str) -> dict[str, Any]:
     but with variance). Returns the rolled quest name + estimated success
     probability in the response. Fails if a quest is already active.
     """
+    valid_zone_ids = [z.id for z in quests.list_zones()]
+    if zone_id not in valid_zone_ids:
+        raise ValueError(
+            f"unknown zone {zone_id!r}; valid zones: {', '.join(valid_zone_ids)}"
+        )
     events = drain_xp_log()
     rolled: dict[str, Any] = {}
 
@@ -549,6 +571,7 @@ def check_quest() -> dict[str, Any]:
 def claim_quest() -> dict[str, Any]:
     """Claim a completed quest, rolling success/failure and applying rewards."""
     events = drain_xp_log()
+    captured: dict[str, Any] = {}
 
     def fn(state: State) -> None:
         b = _require_buddy(state)
@@ -558,21 +581,53 @@ def claim_quest() -> dict[str, Any]:
         if not b.quest.is_done():
             raise ValueError(f"quest not finished: {b.quest.remaining()}s left")
         result = quests.claim(b)
-        fired_names = []
+        fired_names: list[str] = []
         for sid in result.fired_skills:
             try:
                 fired_names.append(skills.get(sid).name)
             except KeyError:
                 fired_names.append(sid)
-        line = (f"{result.flavor} (+{result.xp} xp"
-                + (f", got {', '.join(result.items)}" if result.items else "")
-                + (f", -{result.hp_damage} hp" if result.hp_damage else "")
-                + (f", cast -{result.mana_cost} mp" if result.mana_cast else "")
-                + (f", used {', '.join(fired_names)}" if fired_names else "") + ")")
+
+        line = result.flavor
+        if not result.success:
+            hints: list[str] = [f"~{int(round(result.probability * 100))}% odds"]
+            if result.weakest_stat:
+                hints.append(f"{result.weakest_stat.rstrip('_')} was weakest")
+            if result.defeated_by:
+                hints.append(f"lost to a {result.defeated_by}")
+            line += f" [{', '.join(hints)}]"
+        line += (f" (+{result.xp} xp"
+                 + (f", got {', '.join(result.items)}" if result.items else "")
+                 + (f", -{result.hp_damage} hp" if result.hp_damage else "")
+                 + (f", cast -{result.mana_cost} mp" if result.mana_cast else "")
+                 + (f", used {', '.join(fired_names)}" if fired_names else "") + ")")
         state.add_event(line)
         leveling.check_level_ups(state)
 
-    return _snapshot(mutate_state(fn))
+        captured["result"] = result
+        captured["fired_names"] = fired_names
+
+    state = mutate_state(fn)
+    snap = _snapshot(state)
+    result: quests.QuestResult = captured["result"]
+    snap["claim_result"] = {
+        "success": result.success,
+        "xp": result.xp,
+        "items": list(result.items),
+        "hp_damage": result.hp_damage,
+        "flavor": result.flavor,
+        "probability": result.probability,
+        "difficulty": result.difficulty,
+        "stat_score": result.stat_score,
+        "weakest_stat": (result.weakest_stat.rstrip("_") if result.weakest_stat else None),
+        "fail_narrative": list(result.fail_narrative),
+        "combat_log": list(result.combat_log),
+        "defeated_by": result.defeated_by,
+        "fired_skills": list(captured["fired_names"]),
+        "mana_cost": result.mana_cost,
+        "mana_cast": result.mana_cast,
+    }
+    return snap
 
 
 @mcp.tool()
@@ -587,6 +642,7 @@ def cancel_quest() -> dict[str, Any]:
             raise ValueError("no active quest")
         qid = b.quest.id
         b.quest = None
+        b.combat = None
         state.add_event(f"cancelled {qid}")
 
     return _snapshot(mutate_state(fn))
@@ -626,6 +682,72 @@ def _activity_loop_status() -> str:
     except OSError:
         return "error"
     return "spawned"
+
+
+def _last_action_from_log() -> Optional[dict[str, Any]]:
+    """Return the most recent non-error entry from activity_loop.log, or None.
+
+    The log is a JSON-per-line stream written by activity_loop._log_tick with
+    shape: {"action": "noop"|"idle_flavor"|"start_quest"|"start"|"stop"|"error",
+    "reason": str, "t": int, ...}. We skip "error" entries so a recent crash
+    doesn't mask the last real heartbeat. The log is already capped at ~500
+    lines by _log_tick, so reading the whole file is cheap.
+    """
+    try:
+        raw = paths.activity_loop_log().read_text()
+    except (FileNotFoundError, OSError):
+        return None
+    for line in reversed(raw.splitlines()):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if rec.get("action") == "error":
+            continue
+        return rec
+    return None
+
+
+def _loop_health(state: State) -> dict[str, Any]:
+    """Check activity-loop liveness, auto-respawn if dead, report last action.
+
+    Runs outside the mutate_state flock (called from _snapshot, which executes
+    post-lock). Delegates the actual respawn to _activity_loop_status so it
+    stays race-safe under the singleton flock.
+    """
+    pid_path = paths.activity_loop_pid()
+    try:
+        existing = int(pid_path.read_text().strip())
+    except (OSError, ValueError):
+        existing = 0
+    alive = existing > 0 and panes._pid_alive(existing)
+
+    status = "live"
+    if not alive:
+        if state.buddy is None:
+            status = "skipped"
+        else:
+            status = _activity_loop_status()
+            alive = status in ("already_live", "spawned")
+
+    out: dict[str, Any] = {"alive": alive, "status": status}
+
+    last = _last_action_from_log()
+    if last is not None:
+        t = int(last.get("t", 0))
+        out["last_action"] = str(last.get("action", ""))
+        out["last_action_t"] = t
+        if t:
+            out["last_action_ago_s"] = max(0, int(time.time()) - t)
+        reason = last.get("reason")
+        if isinstance(reason, str) and reason:
+            out["last_action_reason"] = reason[:120]
+        if last.get("action") == "start_quest" and "quest" in last:
+            out["last_action_quest"] = str(last["quest"])
+    return out
 
 
 def _stop_activity_loop_if_orphaned() -> str:

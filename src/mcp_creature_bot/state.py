@@ -57,6 +57,17 @@ class Stats:
 
 
 @dataclass
+class Combat:
+    """Live encounter state stored on the buddy while a combat round is in flight."""
+    enemy_id: str
+    enemy_hp: int
+    enemy_max_hp: int
+    started_at: int
+    last_round_at: int
+    log: list[str] = field(default_factory=list)
+
+
+@dataclass
 class MythicOverlay:
     """Player-unique post-apex evolution. Persists on the buddy and overrides
     display_name / blurb without changing the underlying species id (so sprite
@@ -83,6 +94,7 @@ class Buddy:
     prompts_count: int = 0
     mythic: Optional[MythicOverlay] = None
     traits: dict[str, int] = field(default_factory=dict)
+    personality: str = ""
     mood: int = 100
     max_mood: int = 100
     stamina: int = 100
@@ -90,6 +102,8 @@ class Buddy:
     current_mana: int = 0
     known_skills: list[str] = field(default_factory=list)
     active_skills: list[str] = field(default_factory=list)
+    combat: Optional[Combat] = None
+    last_combat_spawn_at: int = 0
 
     @property
     def max_hp(self) -> int:
@@ -142,6 +156,7 @@ def _buddy_to_dict(b: Buddy) -> dict[str, Any]:
             if b.mythic else None
         ),
         "traits": dict(b.traits),
+        "personality": b.personality,
         "mood": b.mood,
         "max_mood": b.max_mood,
         "stamina": b.stamina,
@@ -149,6 +164,18 @@ def _buddy_to_dict(b: Buddy) -> dict[str, Any]:
         "current_mana": b.current_mana,
         "known_skills": list(b.known_skills),
         "active_skills": list(b.active_skills),
+        "combat": (
+            {
+                "enemy_id": b.combat.enemy_id,
+                "enemy_hp": b.combat.enemy_hp,
+                "enemy_max_hp": b.combat.enemy_max_hp,
+                "started_at": b.combat.started_at,
+                "last_round_at": b.combat.last_round_at,
+                "log": list(b.combat.log),
+            }
+            if b.combat else None
+        ),
+        "last_combat_spawn_at": b.last_combat_spawn_at,
     }
     return d
 
@@ -162,6 +189,18 @@ def _buddy_from_dict(d: dict[str, Any]) -> Buddy:
     )
     q = d.get("quest")
     quest = Quest(id=q["id"], started_at=q["started_at"], duration_s=q["duration_s"]) if q else None
+    c = d.get("combat")
+    combat = (
+        Combat(
+            enemy_id=str(c["enemy_id"]),
+            enemy_hp=int(c["enemy_hp"]),
+            enemy_max_hp=int(c["enemy_max_hp"]),
+            started_at=int(c["started_at"]),
+            last_round_at=int(c["last_round_at"]),
+            log=[str(x) for x in c.get("log", [])],
+        )
+        if c else None
+    )
     m = d.get("mythic")
     mythic = (
         MythicOverlay(
@@ -177,6 +216,16 @@ def _buddy_from_dict(d: dict[str, Any]) -> Buddy:
         k: int(v) for k, v in traits_raw.items()
         if isinstance(v, (int, float))
     }
+    personality = str(d.get("personality", "") or "")
+    if not personality:
+        # Legacy save: derive a label from whatever traits are there,
+        # or seed both when nothing at all is stored.
+        from . import personalities  # local import avoids cycles at module load
+        if traits:
+            personality = personalities.closest_to_traits(traits).id
+        else:
+            personality = "balanced"
+            traits = dict(personalities.PERSONALITIES["balanced"].traits)
     return Buddy(
         species=d["species"], name=d["name"], level=d.get("level", 1), xp=d.get("xp", 0),
         stats=stats, current_hp=d.get("current_hp", stats.hp),
@@ -186,6 +235,7 @@ def _buddy_from_dict(d: dict[str, Any]) -> Buddy:
         prompts_count=d.get("prompts_count", 0),
         mythic=mythic,
         traits=traits,
+        personality=personality,
         mood=int(d.get("mood", 100)),
         max_mood=int(d.get("max_mood", 100)),
         stamina=int(d.get("stamina", 100)),
@@ -193,6 +243,8 @@ def _buddy_from_dict(d: dict[str, Any]) -> Buddy:
         current_mana=int(d.get("current_mana", 0)),
         known_skills=[str(x) for x in d.get("known_skills", [])],
         active_skills=[str(x) for x in d.get("active_skills", [])],
+        combat=combat,
+        last_combat_spawn_at=int(d.get("last_combat_spawn_at", 0)),
     )
 
 
