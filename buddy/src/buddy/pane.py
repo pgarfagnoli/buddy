@@ -167,10 +167,19 @@ def _render(state: State, ticker: FlavorTicker, tick: int, cols: int, rows: int)
         out.append("  " + color + line + RESET + "\n")
     out.append("\n")
 
+    # Pre-compute branch eligibility once — used for both the ✨ flash
+    # next to the level and the EVOLVE notice block below the name.
+    if sp.evolves_at is not None and sp.evolutions:
+        evo_branches = [species.branch_eligibility(e, b.stats) for e in sp.evolutions]
+    else:
+        evo_branches = []
+    at_or_past_evolve = sp.evolves_at is not None and b.level >= sp.evolves_at
+    any_eligible = any(br["eligible"] for br in evo_branches)
+
     # name + level
     stat_flash = (BOLD + FG_YELLOW + " ⚡" + str(b.stat_points_unspent) + RESET) if b.stat_points_unspent else ""
     evo_flash = ""
-    if sp.evolves_at is not None and b.level >= sp.evolves_at - 1 and sp.evolutions:
+    if at_or_past_evolve and any_eligible:
         evo_flash = BOLD + FG_CYAN + " ✨" + RESET
     mythic_flash = BOLD + FG_MAGENTA + " ★" + RESET if b.mythic else ""
     out.append(f"  {BOLD}{b.name}{RESET}  Lv{b.level}{stat_flash}{evo_flash}{mythic_flash}\n")
@@ -184,16 +193,36 @@ def _render(state: State, ticker: FlavorTicker, tick: int, cols: int, rows: int)
         out.append(f"  {DIM}{piece}{RESET}\n")
     out.append("\n")
 
+    # EVOLVE block — only while at or past the evolve level. Each branch
+    # renders with ✓/✗ per requirement so the player can see exactly what's
+    # blocking them.
+    if at_or_past_evolve and evo_branches:
+        out.append(f"  {BOLD}EVOLVE{RESET}\n")
+        name_w = max(len(br["display_name"]) for br in evo_branches)
+        for br in evo_branches:
+            prefix = (FG_CYAN + "✨" + RESET) if br["eligible"] else "  "
+            check_parts: list[str] = []
+            for c in br["checks"]:
+                tick = (FG_GREEN + "✓" + RESET) if c["met"] else (FG_RED + "✗" + RESET)
+                check_parts.append(f"{tick} {c['stat']} {c['actual']}/{c['required']}")
+            checks_text = "  ".join(check_parts)
+            name_text = br["display_name"].ljust(name_w)
+            name_colored = (
+                f"{FG_CYAN}{name_text}{RESET}" if br["eligible"] else f"{DIM}{name_text}{RESET}"
+            )
+            out.append(f"  {prefix} {name_colored}  {checks_text}\n")
+        out.append("\n")
+
     # Status bars, two per row
     bar_w = 10
-    xp_cap = leveling.xp_to_next(b.level, species.get_tier(b.species))
+    xp_cap = leveling.xp_to_next(b.level, species.get_tier(b.species), sp.evolves_at)
     cells: list[tuple[str, str]] = []
     for label, cur, maximum, color in (
         ("HP", b.current_hp, b.max_hp, FG_RED),
         ("MP", b.current_mana, b.max_mana, FG_BLUE),
-        ("XP", b.xp, xp_cap, FG_GREEN),
         ("MD", b.mood, b.max_mood, FG_MAGENTA),
         ("ST", b.stamina, b.max_stamina, FG_CYAN),
+        ("XP", b.xp, xp_cap, FG_GREEN),
     ):
         bar = _bar(cur, maximum, width=bar_w, color=color)
         val_text = f"{cur}/{maximum}"

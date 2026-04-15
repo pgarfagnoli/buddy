@@ -9,9 +9,14 @@ Design notes
 ------------
 - Singleton enforced by a non-blocking flock on `paths.activity_loop_lock()`:
   a second instance exits 0 silently.
-- `--bare` strips hooks/MCP/skills/statusline/auto-memory from the subprocess
-  `claude`, so the decision call CANNOT recursively fire this project's own
-  Stop hook.
+- The decision subprocess strips hooks/MCP/skills via
+  `--setting-sources local --strict-mcp-config --disable-slash-commands`,
+  not `--bare`. `--bare` would also disable OAuth/keychain auth (it requires
+  ANTHROPIC_API_KEY), which breaks decision calls for users on OAuth login.
+  This combination skips the user-scope buddy Stop hook and MCP server (so
+  the decision call CANNOT recursively fire this project's own Stop hook),
+  while leaving keychain auth intact. If the buddy hook is ever moved to
+  project-local settings, this gate will need to be re-evaluated.
 - All state mutations go through `state.mutate_state`, same as every other
   code path.
 """
@@ -38,7 +43,6 @@ from .state import Buddy, State, load_state, mutate_state
 
 TICK_INTERVAL_S = int(os.environ.get("BUDDY_TICK_S", "600"))  # 10 min
 TICK_JITTER = 0.25                                             # ±25%
-IDLE_THRESHOLD_S = int(os.environ.get("BUDDY_IDLE_THRESHOLD_S", "120"))
 SUBPROCESS_TIMEOUT_S = 45
 MODEL_ID = "claude-haiku-4-5-20251001"
 LOG_MAX_LINES = 500
@@ -127,18 +131,6 @@ def _log_exc(exc: BaseException) -> None:
 
 # ─── decision layer ─────────────────────────────────────────────────────────
 
-_DECISION_SCHEMA = {
-    "type": "object",
-    "required": ["action", "reason"],
-    "properties": {
-        "action":   {"enum": ["noop", "idle_flavor", "start_quest"]},
-        "quest_id": {"type": "string"},
-        "flavor":   {"type": "string", "maxLength": 120},
-        "reason":   {"type": "string", "maxLength": 160},
-    },
-}
-
-
 def _build_prompt(state: State) -> str:
     b = state.buddy
     assert b is not None
@@ -181,20 +173,49 @@ def _build_prompt(state: State) -> str:
     )
 
 
+_ORACLE_SYSTEM_PROMPT = (
+    "You are a JSON-only decision oracle for an RPG pet game. "
+    "Reply with EXACTLY one JSON object matching this shape: "
+    '{"action": "noop"|"idle_flavor"|"start_quest", "reason": str, '
+    '"flavor"?: str, "quest_id"?: str}. '
+    "No prose, no markdown, no code fences."
+)
+
+
+def _extract_json_object(text: str) -> Optional[dict]:
+    """Pull the first JSON object out of `text`, tolerating ```json fences and
+    surrounding prose. Returns None if nothing parseable is found.
+    """
+    if not text:
+        return None
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    try:
+        parsed = json.loads(text[start:end + 1])
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
 def _call_claude_p(prompt: str) -> Optional[dict]:
-    """Invoke `claude -p --bare` and parse the JSON payload. Returns None on
-    any failure (missing binary, timeout, non-zero exit, unparseable output).
+    """Invoke `claude -p` and parse a JSON decision out of its result. Returns
+    None on any failure (missing binary, timeout, non-zero exit, unparseable
+    output).
     """
     claude_bin = shutil.which("claude")
     if not claude_bin:
         return None
     cmd = [
         claude_bin, "-p", prompt,
-        "--bare",
+        "--system-prompt", _ORACLE_SYSTEM_PROMPT,
+        "--setting-sources", "local",
+        "--strict-mcp-config",
+        "--disable-slash-commands",
         "--output-format", "json",
         "--model", MODEL_ID,
         "--tools", "",
-        "--json-schema", json.dumps(_DECISION_SCHEMA),
     ]
     try:
         res = subprocess.run(
@@ -211,10 +232,7 @@ def _call_claude_p(prompt: str) -> Optional[dict]:
     result_raw = envelope.get("result")
     if not isinstance(result_raw, str):
         return None
-    try:
-        return json.loads(result_raw)
-    except json.JSONDecodeError:
-        return None
+    return _extract_json_object(result_raw)
 
 
 def _validate_llm_decision(parsed: dict, state: State) -> Optional[IdleDecision]:
@@ -350,9 +368,6 @@ def _maybe_tick() -> None:
         return  # no buddy yet
     if b.quest is not None:
         return  # busy — let the existing quest finish
-    now = int(time.time())
-    if b.last_prompt_at and now - b.last_prompt_at < IDLE_THRESHOLD_S:
-        return  # user is still active; don't interrupt
     decision = _decide(state)
     _apply(decision)
 

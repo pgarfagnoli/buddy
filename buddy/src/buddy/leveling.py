@@ -26,16 +26,22 @@ MAX_HP_PER_LEVEL = 5
 MANA_REGEN_PER_PROMPT = 2
 
 
-def xp_to_next(level: int, tier: int = 0) -> int:
+def xp_to_next(level: int, tier: int = 0, evolves_at: Optional[int] = None) -> int:
     """XP needed to go from `level` to `level+1`.
 
-    The curve grows with both level and evolution tier. Higher-tier species
-    need more XP per level than starters at the same level — a tier-4 apex
-    form needs 3x as much XP as a tier-0 starter. This makes reaching the
-    top of a deep lineage a real commitment while keeping starter pacing
-    unchanged.
+    The base curve grows with level and evolution tier — a tier-4 apex form
+    needs 3x as much XP as a tier-0 starter at the same level. On top of
+    that, leveling past the species's `evolves_at` is soft-capped: each
+    level at-or-past the threshold multiplies the cost by 3^(excess+1),
+    making it prohibitive to drift past the evolve level without actually
+    evolving. The cap is naturally self-limiting; the level-up loop stops
+    on its own once the cost outruns realistic XP gain.
     """
-    return round(50 * (level ** 1.5) * (1 + tier * 0.5))
+    base = round(50 * (level ** 1.5) * (1 + tier * 0.5))
+    if evolves_at is not None and level >= evolves_at:
+        excess = level - evolves_at + 1  # 1 at the evolve level itself
+        return base * (3 ** excess)
+    return base
 
 
 def xp_for_tokens(
@@ -53,53 +59,18 @@ def xp_for_tokens(
     return xp
 
 
-def _try_evolve(state: State) -> Optional[str]:
-    """If the buddy just hit its species' evolves_at level and has
-    evolutions available, pick the branch whose match_stats contains the
-    current dominant stat (default to the first branch), apply its flat
-    stat bonus, swap the species id, and full-heal. Returns the log line
-    if an evolution happened, else None.
-    """
-    b = state.buddy
-    if b is None:
-        return None
-    current = species.get(b.species)
-    if current.evolves_at is None or b.level != current.evolves_at:
-        return None
-    if not current.evolutions:
-        return None
-    dominant = species.get_dominant_stat(b.stats)
-    chosen = next(
-        (e for e in current.evolutions if dominant in e.match_stats),
-        current.evolutions[0],
-    )
-    new_sp = species.get(chosen.evolved_species_id)
-    old_name = current.display_name
-    b.species = new_sp.id
-    for stat_key, delta in chosen.stat_bonus.items():
-        setattr(b.stats, stat_key, getattr(b.stats, stat_key) + delta)
-    b.current_hp = b.stats.hp  # full heal on evolution
-    b.current_mana = b.max_mana
-    b.level = 1                # reset to Lv1 for the new form
-    b.xp = 0                   # clean slate; surplus XP from the triggering level-up is discarded
-    line = f"{b.name} evolved from {old_name} into {new_sp.display_name}!"
-    state.add_event(line)
-    newly: list[str] = []
-    if chosen.grants_skill and skills._learn(b, chosen.grants_skill):
-        newly.append(chosen.grants_skill)
-    newly.extend(skills.check_and_grant_skills(b))
-    _announce_new_skills(state, b, newly)
-    return line
-
-
 def check_level_ups(state: State) -> list[str]:
     """Apply as many level-ups as the buddy's current xp warrants. Returns log lines."""
     messages: list[str] = []
     if state.buddy is None:
         return messages
     b = state.buddy
-    while b.xp >= xp_to_next(b.level, species.get_tier(b.species)):
-        b.xp -= xp_to_next(b.level, species.get_tier(b.species))
+    while True:
+        sp = species.get(b.species)
+        cost = xp_to_next(b.level, species.get_tier(b.species), sp.evolves_at)
+        if b.xp < cost:
+            break
+        b.xp -= cost
         b.level += 1
         b.stats.hp += MAX_HP_PER_LEVEL
         b.stat_points_unspent += STAT_POINTS_PER_LEVEL
@@ -110,9 +81,6 @@ def check_level_ups(state: State) -> list[str]:
         state.add_event(msg)
         newly = skills.check_and_grant_skills(b)
         _announce_new_skills(state, b, newly)
-        evo_msg = _try_evolve(state)
-        if evo_msg:
-            messages.append(evo_msg)
     return messages
 
 

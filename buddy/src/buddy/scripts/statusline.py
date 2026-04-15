@@ -40,7 +40,7 @@ def main() -> int:
         f"Lv{b.level}",
         f"HP {_bar(b.current_hp, b.max_hp)}",
         f"MP {_bar(b.current_mana, b.max_mana)}",
-        f"XP {_bar(b.xp, leveling.xp_to_next(b.level, species.get_tier(b.species)))}",
+        f"XP {_bar(b.xp, leveling.xp_to_next(b.level, species.get_tier(b.species), species.get(b.species).evolves_at))}",
     ]
     if b.stat_points_unspent:
         parts.append(f"⚡{b.stat_points_unspent}")

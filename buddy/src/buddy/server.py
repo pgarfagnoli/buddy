@@ -59,7 +59,9 @@ def _snapshot(state: State) -> dict[str, Any]:
     bd = _buddy_to_dict(b)
     bd["max_hp"] = b.max_hp
     bd["max_mana"] = b.max_mana
-    bd["xp_to_next"] = leveling.xp_to_next(b.level, species.get_tier(b.species))
+    bd["xp_to_next"] = leveling.xp_to_next(
+        b.level, species.get_tier(b.species), species.get(b.species).evolves_at
+    )
     bd["traits"] = dict(b.traits)
     bd["personality_display"] = (
         personalities.PERSONALITIES[b.personality].display_name
@@ -87,18 +89,13 @@ def _snapshot(state: State) -> dict[str, Any]:
             "committed_at": b.mythic.committed_at,
             "stat_bonus": dict(b.mythic.stat_bonus),
         }
-    if sp.evolves_at is not None and b.level < sp.evolves_at and sp.evolutions:
-        dominant = species.get_dominant_stat(b.stats)
-        chosen = next(
-            (e for e in sp.evolutions if dominant in e.match_stats),
-            sp.evolutions[0],
-        )
-        target = species.get(chosen.evolved_species_id)
-        bd["evolution_preview"] = {
+    if sp.evolves_at is not None and sp.evolutions:
+        branches = [species.branch_eligibility(e, b.stats) for e in sp.evolutions]
+        bd["evolution_ready"] = {
             "trigger_level": sp.evolves_at,
-            "predicted_form": target.display_name,
-            "dominant_stat": dominant.rstrip("_"),
-            "stat_bonus": dict(chosen.stat_bonus),
+            "at_or_past_level": b.level >= sp.evolves_at,
+            "branches": branches,
+            "any_eligible": any(br["eligible"] for br in branches),
         }
     # Post-apex mythic readiness signal: apex species at or above their
     # mythic_at level, not yet ascended. Drives the /buddy dispatcher to
@@ -485,6 +482,71 @@ def commit_legendary_evolution(
         b.current_hp = b.stats.hp  # capstone full heal
         b.mythic = overlay
         state.add_event(f"{b.name} ascended into {dn}!")
+
+    return _snapshot(mutate_state(fn))
+
+
+@mcp.tool()
+def commit_evolution(species_id: str) -> dict[str, Any]:
+    """Evolve the buddy into a chosen branch.
+
+    The buddy must have reached the source species's evolves_at level AND
+    every entry in the chosen Evolution's `requirements` dict must be met.
+    On success the buddy swaps species, gains the branch's stat_bonus,
+    full-heals, and resets to Lv1.
+    """
+    events = drain_xp_log()
+
+    def fn(state: State) -> None:
+        b = _require_buddy(state)
+        _sync_apply(state, events)
+        sp = species.get(b.species)
+        if sp.evolves_at is None or not sp.evolutions:
+            raise ValueError(f"{sp.display_name} has no further evolutions")
+        if b.level < sp.evolves_at:
+            raise ValueError(
+                f"{b.name} must reach Lv{sp.evolves_at} before evolving "
+                f"(currently Lv{b.level})"
+            )
+        evo = next(
+            (e for e in sp.evolutions if e.evolved_species_id == species_id),
+            None,
+        )
+        if evo is None:
+            valid = ", ".join(e.evolved_species_id for e in sp.evolutions)
+            raise ValueError(
+                f"unknown evolution {species_id!r}; choose one of: {valid}"
+            )
+        info = species.branch_eligibility(evo, b.stats)
+        if not info["eligible"]:
+            unmet = [
+                f"{c['stat']} {c['actual']}/{c['required']}"
+                for c in info["checks"] if not c["met"]
+            ]
+            raise ValueError(
+                f"{b.name} cannot evolve into {info['display_name']} yet — "
+                f"needs: {', '.join(unmet)}"
+            )
+        new_sp = species.get(evo.evolved_species_id)
+        old_name = sp.display_name
+        b.species = new_sp.id
+        for k, delta in evo.stat_bonus.items():
+            setattr(b.stats, k, getattr(b.stats, k) + delta)
+        b.current_hp = b.stats.hp
+        b.current_mana = b.max_mana
+        b.level = 1
+        b.xp = 0
+        state.add_event(f"{b.name} evolved from {old_name} into {new_sp.display_name}!")
+        newly: list[str] = []
+        if evo.grants_skill and skills._learn(b, evo.grants_skill):
+            newly.append(evo.grants_skill)
+        newly.extend(skills.check_and_grant_skills(b))
+        for sid in newly:
+            try:
+                line = f"{b.name} learned {skills.get(sid).name}!"
+            except KeyError:
+                line = f"{b.name} learned {sid}!"
+            state.add_event(line)
 
     return _snapshot(mutate_state(fn))
 
