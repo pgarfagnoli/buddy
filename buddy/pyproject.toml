@@ -16,6 +16,7 @@ dependencies = [
 buddy = "buddy.server:main"
 buddy-install = "buddy.scripts.install:main"
 buddy-uninstall = "buddy.scripts.uninstall:main"
+claude-danger-tmux = "buddy.scripts.claude_danger_tmux:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

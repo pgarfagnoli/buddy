@@ -166,5 +166,6 @@ class Buddy < Formula
   test do
     assert_predicate bin/"buddy", :exist?
     assert_predicate bin/"buddy-install", :exist?
+    assert_predicate bin/"claude-danger-tmux", :exist?
   end
 end
