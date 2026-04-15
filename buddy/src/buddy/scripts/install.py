@@ -137,7 +137,17 @@ def _link_commands() -> tuple[int, int, int, list[str]]:
                     continue
             except OSError:
                 pass
-            # Symlink points somewhere else — user-directed, leave alone.
+            # Stale symlinks from earlier installs: either broken (target is
+            # gone) or still pointing at the pre-rename mcp_creature_bot path.
+            # Treat those as ours and upgrade in place; anything else is a
+            # user-directed symlink and we leave it alone.
+            link_target = os.readlink(target)
+            resolved_exists = target.exists()
+            if not resolved_exists or "mcp_creature_bot" in link_target:
+                target.unlink()
+                target.symlink_to(source_path)
+                migrated += 1
+                continue
             conflicts.append(entry.name)
             continue
 
