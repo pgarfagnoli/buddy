@@ -8,6 +8,7 @@ class McpCreatureBot < Formula
   license "MIT"
 
   depends_on "python@3.12"
+  depends_on "tmux"
 
   # TODO: run `brew update-python-resources mcp-creature-bot` (or
   # `poet -f mcp-creature-bot`) after the tag is cut to generate the
