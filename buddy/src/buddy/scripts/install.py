@@ -57,9 +57,10 @@ HOOK_EVENTS = {
 }
 
 HOOK_MARKER = "buddy.hooks."
-# Pre-rename marker: older installs wired hooks to the mcp_creature_bot module.
-# We strip those during install so the rename migration is seamless.
+# Pre-rename markers: older installs wired everything to the mcp_creature_bot
+# module. We strip/upgrade those during install so the rename is seamless.
 LEGACY_HOOK_MARKER = "mcp_creature_bot.hooks."
+LEGACY_STATUSLINE_MARKER = "mcp_creature_bot.scripts.statusline"
 LEGACY_MCP_SERVER_NAME = "mcp-creature-bot"
 
 
@@ -236,10 +237,20 @@ def _merge_hooks(settings: dict) -> int:
 
 
 def _merge_statusline(settings: dict) -> str:
-    """Returns 'installed', 'already-installed', or 'conflict'."""
+    """Returns 'installed', 'already-installed', 'upgraded', or 'conflict'."""
     existing = settings.get("statusLine")
-    if isinstance(existing, dict) and STATUSLINE_COMMAND in str(existing.get("command", "")):
+    existing_cmd = str(existing.get("command", "")) if isinstance(existing, dict) else ""
+    if isinstance(existing, dict) and STATUSLINE_COMMAND in existing_cmd:
         return "already-installed"
+    if isinstance(existing, dict) and LEGACY_STATUSLINE_MARKER in existing_cmd:
+        # Pre-rename statusLine still in settings.json — the old module is gone
+        # so leaving it would break every tick. Upgrade it in place.
+        settings["statusLine"] = {
+            "type": "command",
+            "command": STATUSLINE_COMMAND,
+            "refreshInterval": 5,
+        }
+        return "upgraded"
     if existing:
         return "conflict"
     settings["statusLine"] = {
@@ -351,6 +362,8 @@ def main() -> int:
         print(f"  statusLine: installed into {CLAUDE_SETTINGS}")
     elif statusline_status == "already-installed":
         print("  statusLine: already installed")
+    elif statusline_status == "upgraded":
+        print("  statusLine: upgraded stale mcp_creature_bot entry to buddy")
     else:
         print(
             f"  statusLine: CONFLICT — a different statusLine is set in {CLAUDE_SETTINGS}; left it alone.\n"
