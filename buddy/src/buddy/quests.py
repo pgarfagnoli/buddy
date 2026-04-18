@@ -1,12 +1,16 @@
 """Quest registry, zones, smart selection, rolls, and flavor text."""
 from __future__ import annotations
 
+import json
 import random
+import shutil
+import subprocess
 import time
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Optional
 
 from . import skills, species, vignettes
+from .llm import extract_json_object as _extract_json_object
 from .state import Buddy, Quest, State
 
 
@@ -40,7 +44,7 @@ class QuestDef:
     hp_penalty_pct_on_failure: int
     blurb: str
     flavor: tuple[str, ...]
-    category: str = "combat"  # "combat" | "gathering" | "rest"
+    category: str  # "combat" | "gathering" | "rest" — no default; must be explicit
 
 
 @dataclass(frozen=True)
@@ -65,7 +69,12 @@ QUESTS: dict[str, QuestDef] = {
             "sneezes from loose pollen",
             "tumbles through tall grass",
             "locks eyes with a ladybug",
+            "freezes mid-step as a wing flickers past",
+            "skids on a clover patch chasing a flash of white",
+            "stops to track a second butterfly that wasn't there",
+            "leaps after a shadow and lands gracefully on grass",
         ),
+        category="gathering",
     ),
     "meadow_pollen": QuestDef(
         id="meadow_pollen", name="Pollen Gathering", duration_s=150, difficulty=5,
@@ -78,7 +87,12 @@ QUESTS: dict[str, QuestDef] = {
             "carefully sidesteps a bumblebee",
             "carries a neat little pollen bundle",
             "stops to admire a daisy",
+            "shakes a stamen and sneezes yellow",
+            "negotiates politely with a hovering bee",
+            "tucks pollen into a fur-pocket on its shoulder",
+            "rolls in a buttercup and emerges glowing",
         ),
+        category="gathering",
     ),
     "meadow_rabbit": QuestDef(
         id="meadow_rabbit", name="Rabbit Tracking", duration_s=180, difficulty=7,
@@ -91,7 +105,12 @@ QUESTS: dict[str, QuestDef] = {
             "loses the trail, then finds it again",
             "spots a warren and hesitates",
             "leaps over a fallen branch",
+            "freezes — then bolts after a flash of brown",
+            "noses at a fresh print and grins",
+            "doubles back to check a snapped grass blade",
+            "skids to a stop, ears swivelling",
         ),
+        category="gathering",
     ),
 
     # ─── forest (Lv 3) ──────────────────────────────────────────────────────
@@ -106,7 +125,12 @@ QUESTS: dict[str, QuestDef] = {
             "nibbles a leaf to be sure",
             "digs up a promising stem",
             "backs away from a slime mold",
+            "double-checks a spore print against memory",
+            "brushes loam off a fat brown cap",
+            "sniffs a mushroom and decides yes",
+            "stacks three caps neatly at the trunk",
         ),
+        category="combat",
     ),
     "forest_sapling": QuestDef(
         id="forest_sapling", name="Lost Sapling", duration_s=240, difficulty=11,
@@ -119,7 +143,12 @@ QUESTS: dict[str, QuestDef] = {
             "hears distant rustling",
             "double-checks a hollow log",
             "follows a trail of acorns",
+            "kneels by a footprint that isn't quite right",
+            "circles a stump that hums faintly",
+            "untangles a leafless twig from its tail",
+            "whispers a question to the canopy",
         ),
+        category="combat",
     ),
     "forest_spider": QuestDef(
         id="forest_spider", name="Spider Hollow", duration_s=300, difficulty=14,
@@ -132,7 +161,12 @@ QUESTS: dict[str, QuestDef] = {
             "spots glinting eyes in a hollow",
             "stomps on an advance scout",
             "swats a strand of silk",
+            "ducks under a glistening trip-line",
+            "tracks rustling along the canopy above",
+            "crushes a twitching egg-sac under one paw",
+            "flicks silk from its whiskers and growls",
         ),
+        category="combat",
     ),
 
     # ─── cave (Lv 5) ────────────────────────────────────────────────────────
@@ -148,6 +182,7 @@ QUESTS: dict[str, QuestDef] = {
             "dodges a slow rockfall",
             "squints at a vein in the rock",
         ),
+        category="combat",
     ),
     "cave_river": QuestDef(
         id="cave_river", name="Underground River", duration_s=300, difficulty=16,
@@ -161,6 +196,7 @@ QUESTS: dict[str, QuestDef] = {
             "wades knee-deep in icy water",
             "shakes water from its fur",
         ),
+        category="combat",
     ),
     "cave_echoes": QuestDef(
         id="cave_echoes", name="Echo Chamber", duration_s=420, difficulty=20,
@@ -174,6 +210,7 @@ QUESTS: dict[str, QuestDef] = {
             "clamps paws over ears",
             "listens for a different echo",
         ),
+        category="combat",
     ),
 
     # ─── ruins (Lv 7) ───────────────────────────────────────────────────────
@@ -181,40 +218,43 @@ QUESTS: dict[str, QuestDef] = {
         id="ruins_vault", name="Sealed Vault", duration_s=480, difficulty=20,
         key_stats=("def_", "res"),
         xp_success_range=(150, 210), xp_failure=30,
-        items_on_success=("rune-fragment",), hp_penalty_pct_on_failure=15,
-        blurb="A stone vault in a forgotten temple, still warded.",
+        items_on_success=("vault-token",), hp_penalty_pct_on_failure=15,
+        blurb="A stone vault in a forgotten temple, still sealed shut.",
         flavor=(
-            "tests a glowing rune with one claw",
-            "ducks a lashing ward",
+            "tests a rusted hinge",
+            "feels for a hidden latch",
             "wedges open a cracked lid",
-            "feels an unseen gaze",
+            "grits its teeth and shoves",
         ),
+        category="combat",
     ),
-    "ruins_runes": QuestDef(
-        id="ruins_runes", name="Rune Puzzle", duration_s=420, difficulty=22,
+    "ruins_codex": QuestDef(
+        id="ruins_codex", name="Sealed Codex", duration_s=420, difficulty=22,
         key_stats=("int_", "luck"),
         xp_success_range=(160, 225), xp_failure=32,
-        items_on_success=("puzzle-key",), hp_penalty_pct_on_failure=15,
-        blurb="An arrangement of carved tiles that very much wants to be solved.",
+        items_on_success=("codex-page",), hp_penalty_pct_on_failure=15,
+        blurb="An inscribed stone book whose pages stick together with age.",
         flavor=(
-            "scratches its head at the grid",
-            "tries a combination, hears a click",
-            "steps back to study the pattern",
-            "presses the wrong tile and winces",
+            "scratches its head at the script",
+            "pries two pages apart, very gently",
+            "steps back to study the layout",
+            "smudges an ink line and winces",
         ),
+        category="combat",
     ),
-    "ruins_guardian": QuestDef(
-        id="ruins_guardian", name="Ancient Guardian", duration_s=600, difficulty=26,
+    "ruins_collapse": QuestDef(
+        id="ruins_collapse", name="Collapsing Vault", duration_s=600, difficulty=26,
         key_stats=("atk", "res", "def_"),
         xp_success_range=(190, 270), xp_failure=36,
-        items_on_success=("guardian-core",), hp_penalty_pct_on_failure=15,
-        blurb="A stone warden has woken up and does not look pleased.",
+        items_on_success=("relic-fragment",), hp_penalty_pct_on_failure=15,
+        blurb="The floor is giving out — get the artifact before the ceiling does.",
         flavor=(
-            "circles the guardian warily",
-            "blocks a swing of stone fists",
-            "lands a blow on a seam",
-            "braces against a shockwave",
+            "tests a sagging beam",
+            "ducks a falling shard",
+            "dives clear of a dropping slab",
+            "braces against a tremor",
         ),
+        category="combat",
     ),
 
     # ─── peaks (Lv 10, endgame) ─────────────────────────────────────────────
@@ -230,33 +270,36 @@ QUESTS: dict[str, QuestDef] = {
             "pulls itself onto a narrow ledge",
             "catches its breath in thin air",
         ),
+        category="combat",
     ),
-    "peaks_yeti": QuestDef(
-        id="peaks_yeti", name="Yeti Encounter", duration_s=900, difficulty=30,
+    "peaks_bear": QuestDef(
+        id="peaks_bear", name="Cave Bear Encounter", duration_s=900, difficulty=30,
         key_stats=("atk", "def_", "res"),
         xp_success_range=(270, 370), xp_failure=48,
-        items_on_success=("yeti-pelt",), hp_penalty_pct_on_failure=25,
-        blurb="A shaggy giant has made a den of the upper pass.",
+        items_on_success=("bear-pelt",), hp_penalty_pct_on_failure=25,
+        blurb="A cave bear has made a den of the upper pass.",
         flavor=(
-            "shivers under a baleful yellow glare",
-            "ducks a swinging club-arm",
+            "shivers under a baleful glare",
+            "ducks a swinging paw",
             "skids across packed snow",
             "finds a bad place to stand",
         ),
+        category="combat",
     ),
-    "peaks_dragon": QuestDef(
-        id="peaks_dragon", name="Dragon Fight", duration_s=1200, difficulty=35,
+    "peaks_condor": QuestDef(
+        id="peaks_condor", name="Andean Condor", duration_s=1200, difficulty=35,
         key_stats=("atk", "def_", "spd", "int_"),
         xp_success_range=(330, 460), xp_failure=55,
-        items_on_success=("dragon-fang",), hp_penalty_pct_on_failure=25,
-        blurb="An actual dragon. At the top of a mountain. Probably regrettable.",
+        items_on_success=("condor-feather",), hp_penalty_pct_on_failure=25,
+        blurb="An Andean condor — ten-foot wingspan and meaner than it looks.",
         flavor=(
-            "circles warily, watching the wings",
-            "takes a scorching hit",
-            "lands a solid blow on a scale",
-            "dodges a tail swipe at the last instant",
+            "circles warily, watching the wingspan",
+            "dives under a dropped stone",
+            "lands a glancing blow on a wing",
+            "rolls clear of stooping talons",
             "howls a battle cry",
         ),
+        category="combat",
     ),
 
     # ─── gathering (non-combat, HP never at risk) ───────────────────────────
@@ -271,6 +314,10 @@ QUESTS: dict[str, QuestDef] = {
             "finds a perfect cluster of ripe fruit",
             "carries three berries stacked on its back",
             "hums while picking",
+            "untangles a thorn from one ear",
+            "stains its paws purple and admires the color",
+            "compares two berries and picks the larger one",
+            "sneaks a snack while no one is looking",
         ),
         category="gathering",
     ),
@@ -285,6 +332,10 @@ QUESTS: dict[str, QuestDef] = {
             "watches a drop roll and catches it",
             "spills half the dew on its paws",
             "admires the tiny rainbow in a droplet",
+            "balances a fat dewdrop on a leaf-tip",
+            "licks a stray drop off its own nose",
+            "wipes a paw on the grass and tries again",
+            "sighs at a perfect drop, lost",
         ),
         category="gathering",
     ),
@@ -299,6 +350,10 @@ QUESTS: dict[str, QuestDef] = {
             "smells the moss and sneezes",
             "finds a perfect velvety clump",
             "listens to the forest and picks carefully",
+            "rolls a clump of moss into a tidy ball",
+            "picks moss out from between its toes",
+            "tests a soft patch with one careful claw",
+            "tucks a green tuft behind one ear",
         ),
         category="gathering",
     ),
@@ -330,6 +385,152 @@ QUESTS: dict[str, QuestDef] = {
         ),
         category="rest",
     ),
+
+    # ─── tundra (Lv 12, high-tier) ──────────────────────────────────────────
+    "tundra_burrow": QuestDef(
+        id="tundra_burrow", name="Snow Burrow", duration_s=180, difficulty=12,
+        key_stats=("res",),
+        xp_success_range=(80, 120), xp_failure=20,
+        items_on_success=(), hp_penalty_pct_on_failure=0,
+        blurb="Curl up in a packed-snow hollow and wait out the wind.",
+        flavor=(
+            "scrapes a hollow in the drift",
+            "tucks its nose under its tail",
+            "listens to the wind whistle past",
+            "warms its paws against its belly",
+        ),
+        category="rest",
+    ),
+    "tundra_lichen_pick": QuestDef(
+        id="tundra_lichen_pick", name="Lichen Pick", duration_s=300, difficulty=28,
+        key_stats=("int_", "luck"),
+        xp_success_range=(220, 320), xp_failure=45,
+        items_on_success=("frost-lichen",), hp_penalty_pct_on_failure=0,
+        blurb="Pry crusty lichen off wind-blasted rocks. Worth the cold.",
+        flavor=(
+            "scrapes lichen off a frost-bitten boulder",
+            "cups its breath to warm its paws",
+            "compares two patches and picks the brighter one",
+            "tucks a clump into a fur pouch",
+        ),
+        category="gathering",
+    ),
+    "tundra_seal_watch": QuestDef(
+        id="tundra_seal_watch", name="Seal Pup Watch", duration_s=420, difficulty=32,
+        key_stats=("int_", "spd"),
+        xp_success_range=(280, 380), xp_failure=55,
+        items_on_success=("seal-down",), hp_penalty_pct_on_failure=10,
+        blurb="Track a seal nursery across the pack ice without spooking the pups.",
+        flavor=(
+            "lies flat behind a snow ridge",
+            "marks a fresh slide trail",
+            "freezes as a head pops up",
+            "keeps downwind of the breathing holes",
+        ),
+        category="gathering",
+    ),
+    "tundra_wolverine": QuestDef(
+        id="tundra_wolverine", name="Wolverine Standoff", duration_s=600, difficulty=36,
+        key_stats=("atk", "def_", "res"),
+        xp_success_range=(360, 480), xp_failure=72,
+        items_on_success=("wolverine-pelt",), hp_penalty_pct_on_failure=25,
+        blurb="A wolverine has claimed the carcass first. It is not in a sharing mood.",
+        flavor=(
+            "circles the kill warily",
+            "ducks a snapping jaw",
+            "lands a glancing rake",
+            "skids on a frozen rib",
+        ),
+        category="combat",
+    ),
+    "tundra_polar_bear": QuestDef(
+        id="tundra_polar_bear", name="Polar Bear Encounter", duration_s=900, difficulty=42,
+        key_stats=("atk", "def_", "res", "hp"),
+        xp_success_range=(440, 580), xp_failure=88,
+        items_on_success=("bear-claw",), hp_penalty_pct_on_failure=30,
+        blurb="A polar bear emerges from a fog bank. Nine hundred pounds, all teeth.",
+        flavor=(
+            "freezes in the bear's eyeline",
+            "ducks under a paw the size of its head",
+            "scrambles between ice floes",
+            "lands a desperate strike",
+            "bolts for cover behind a hummock",
+        ),
+        category="combat",
+    ),
+
+    # ─── abyss (Lv 15, deep ocean apex) ─────────────────────────────────────
+    "abyss_drift": QuestDef(
+        id="abyss_drift", name="Cold Current Drift", duration_s=240, difficulty=15,
+        key_stats=("res",),
+        xp_success_range=(110, 160), xp_failure=30,
+        items_on_success=(), hp_penalty_pct_on_failure=0,
+        blurb="Hang motionless in a deep cold current and let it carry you.",
+        flavor=(
+            "stops thrashing and lets the cold do its work",
+            "slow-blinks in the dim glow",
+            "drifts past a chain of jellies",
+            "watches a marine snowfall settle",
+        ),
+        category="rest",
+    ),
+    "abyss_vent_sample": QuestDef(
+        id="abyss_vent_sample", name="Hydrothermal Vent Sample", duration_s=480, difficulty=38,
+        key_stats=("int_", "res"),
+        xp_success_range=(380, 520), xp_failure=72,
+        items_on_success=("tube-worm-fiber",), hp_penalty_pct_on_failure=15,
+        blurb="Snip a fistful of tube worms from the lip of a black smoker. Don't get boiled.",
+        flavor=(
+            "skirts a curtain of superheated water",
+            "snips at a tangle of tube worms",
+            "ducks a sudden plume of mineral haze",
+            "balances on a brittle chimney edge",
+        ),
+        category="gathering",
+    ),
+    "abyss_coral": QuestDef(
+        id="abyss_coral", name="Black Coral Harvest", duration_s=540, difficulty=42,
+        key_stats=("luck", "int_"),
+        xp_success_range=(420, 560), xp_failure=80,
+        items_on_success=("black-coral-shard",), hp_penalty_pct_on_failure=10,
+        blurb="Cold-water black coral grows where light can't reach. Patient hands only.",
+        flavor=(
+            "kicks gently against a current",
+            "saws at a single thick branch",
+            "tucks a shard into a sealed pouch",
+            "circles the colony to find the next cut",
+        ),
+        category="gathering",
+    ),
+    "abyss_giant_squid": QuestDef(
+        id="abyss_giant_squid", name="Giant Squid Hunt", duration_s=900, difficulty=46,
+        key_stats=("atk", "spd", "int_"),
+        xp_success_range=(520, 680), xp_failure=100,
+        items_on_success=("squid-beak",), hp_penalty_pct_on_failure=30,
+        blurb="A giant squid pulses through the dark. Forty feet of arms and one cold eye.",
+        flavor=(
+            "tracks a flashing chromatophore",
+            "ducks under a sweeping tentacle",
+            "drives in for the mantle",
+            "rolls clear of the hooked suckers",
+        ),
+        category="combat",
+    ),
+    "abyss_megalodon": QuestDef(
+        id="abyss_megalodon", name="Megalodon Encounter", duration_s=1200, difficulty=55,
+        key_stats=("atk", "def_", "spd", "res"),
+        xp_success_range=(620, 820), xp_failure=125,
+        items_on_success=("megalodon-tooth",), hp_penalty_pct_on_failure=35,
+        blurb="A sixty-foot shark from the dark below. Probably regrettable.",
+        flavor=(
+            "feels the pressure wave first",
+            "dives into a kelp tangle",
+            "lands a glancing blow on a tooth",
+            "rolls clear of the second pass",
+            "pulses out a cloud of ink",
+        ),
+        category="combat",
+    ),
 }
 
 
@@ -349,18 +550,34 @@ ZONES: dict[str, Zone] = {
     ),
     "cave": Zone(
         id="cave", name="Cave", recommended_level=5,
-        blurb="Damp tunnels, glowing veins, and very little natural light.",
+        blurb="Damp tunnels, dripping stalactites, and very little natural light.",
         quest_ids=("cave_crystals", "cave_river", "cave_echoes", "cave_pebble_sort"),
     ),
     "ruins": Zone(
         id="ruins", name="Ruins", recommended_level=7,
-        blurb="Ancient arcane stonework that mostly sleeps — mostly.",
-        quest_ids=("ruins_vault", "ruins_runes", "ruins_guardian"),
+        blurb="Crumbling stonework where the wildlife has moved in. Watch your step.",
+        quest_ids=("ruins_vault", "ruins_codex", "ruins_collapse"),
     ),
     "peaks": Zone(
         id="peaks", name="Peaks", recommended_level=10,
-        blurb="Cold altitude, cold wildlife, and something coiled at the summit.",
-        quest_ids=("peaks_climb", "peaks_yeti", "peaks_dragon"),
+        blurb="Cold altitude, thin air, and the largest birds in the world circling overhead.",
+        quest_ids=("peaks_climb", "peaks_bear", "peaks_condor"),
+    ),
+    "tundra": Zone(
+        id="tundra", name="Tundra", recommended_level=12,
+        blurb="Endless white. The wind has a list of things it will not return.",
+        quest_ids=(
+            "tundra_burrow", "tundra_lichen_pick", "tundra_seal_watch",
+            "tundra_wolverine", "tundra_polar_bear",
+        ),
+    ),
+    "abyss": Zone(
+        id="abyss", name="Abyss", recommended_level=15,
+        blurb="Pressure, dark, and creatures that have never seen the sun.",
+        quest_ids=(
+            "abyss_drift", "abyss_vent_sample", "abyss_coral",
+            "abyss_giant_squid", "abyss_megalodon",
+        ),
     ),
 }
 
@@ -371,7 +588,13 @@ _LEGACY_IDS: dict[str, str] = {
     # close equivalent in the new pool so claim_quest doesn't KeyError.
     "forest": "meadow_butterfly",
     "cave": "cave_crystals",
-    "dragon": "peaks_dragon",
+    "dragon": "peaks_condor",
+    # Naturalization rename pass: old fantasy quest ids resolve to their
+    # real-species replacements so any in-flight quest survives the rename.
+    "peaks_yeti": "peaks_bear",
+    "peaks_dragon": "peaks_condor",
+    "ruins_guardian": "ruins_collapse",
+    "ruins_runes": "ruins_codex",
 }
 
 
@@ -435,6 +658,28 @@ def _build_fail_narrative(
     return lines
 
 
+def format_claim_event_line(result: "QuestResult", fired_names: list[str]) -> str:
+    """Build the recent_events line for a quest claim result.
+
+    Centralized here so server.py, activity_loop.py, and pane.py all
+    produce identical formatting — change once, apply everywhere.
+    """
+    line = result.flavor
+    if not result.success:
+        hints: list[str] = [f"~{int(round(result.probability * 100))}% odds"]
+        if result.weakest_stat:
+            hints.append(f"{result.weakest_stat.rstrip('_')} was weakest")
+        if result.defeated_by:
+            hints.append(f"lost to a {result.defeated_by}")
+        line += f" [{', '.join(hints)}]"
+    line += (f" (+{result.xp} xp"
+             + (f", got {', '.join(result.items)}" if result.items else "")
+             + (f", -{result.hp_damage} hp" if result.hp_damage else "")
+             + (f", cast -{result.mana_cost} mp" if result.mana_cast else "")
+             + (f", used {', '.join(fired_names)}" if fired_names else "") + ")")
+    return line
+
+
 def _success_probability(buddy: Buddy, qdef: QuestDef) -> float:
     relevant = sum(getattr(buddy.stats, k) for k in qdef.key_stats)
     # Normalize by number of key stats so high-diff quests with more stats aren't doubly-penalized.
@@ -443,16 +688,132 @@ def _success_probability(buddy: Buddy, qdef: QuestDef) -> float:
     return max(0.1, min(0.95, p))
 
 
+_LLM_MODEL_ID = "claude-haiku-4-5-20251001"
+_LLM_TIMEOUT_S = 30
+_LLM_MAX_FAILURES = 3
+_LLM_BACKOFF_S = 300  # skip LLM for 5 min after this many consecutive failures
+
+_llm_failures = 0
+_llm_backoff_until = 0.0
+
+
+
+def _llm_fail() -> None:
+    """Record an LLM call failure for the circuit breaker."""
+    global _llm_failures, _llm_backoff_until
+    _llm_failures += 1
+    if _llm_failures >= _LLM_MAX_FAILURES:
+        _llm_backoff_until = time.time() + _LLM_BACKOFF_S
+
+
+def _pick_quest_via_llm(
+    buddy: Buddy, zone_id: str, qdefs: list["QuestDef"],
+) -> Optional[tuple["QuestDef", float]]:
+    """Ask Claude to pick the quest the buddy feels most confident about.
+
+    Returns (quest, probability) on success, None on any failure (missing
+    binary, timeout, bad JSON, invalid quest_id). Caller falls back to
+    the dice-based picker on None. A circuit breaker skips the LLM call
+    entirely after _LLM_MAX_FAILURES consecutive failures.
+    """
+    global _llm_failures, _llm_backoff_until
+    if _llm_failures >= _LLM_MAX_FAILURES and time.time() < _llm_backoff_until:
+        return None  # circuit open
+    claude_bin = shutil.which("claude")
+    if not claude_bin:
+        _llm_fail()
+        return None
+
+    quest_lines = []
+    prob_map: dict[str, float] = {}
+    qdef_map: dict[str, "QuestDef"] = {}
+    for q in qdefs:
+        p = _success_probability(buddy, q)
+        prob_map[q.id] = p
+        qdef_map[q.id] = q
+        stats_display = ", ".join(k.rstrip("_") for k in q.key_stats)
+        quest_lines.append(
+            f"  - {q.id} \"{q.name}\" (diff {q.difficulty}, {q.duration_s}s, "
+            f"stats: {stats_display}, success ~{int(round(p * 100))}%): {q.blurb}"
+        )
+
+    traits = buddy.traits or {}
+    prompt = (
+        f"You are deciding which quest an RPG pet should attempt.\n\n"
+        f"Buddy: {buddy.name} the {buddy.species} (Lv{buddy.level}).\n"
+        f"Stats: HP {buddy.stats.hp}, ATK {buddy.stats.atk}, DEF {buddy.stats.def_}, "
+        f"SPD {buddy.stats.spd}, LUCK {buddy.stats.luck}, INT {buddy.stats.int_}, RES {buddy.stats.res}.\n"
+        f"Personality: curiosity {traits.get('curiosity', 5)}, boldness {traits.get('boldness', 5)}, "
+        f"patience {traits.get('patience', 5)}.\n\n"
+        f"Available quests in {zone_id}:\n" + "\n".join(quest_lines) + "\n\n"
+        f"Pick the quest this buddy would choose based on its stats and personality. "
+        f"A cautious buddy picks safe quests; a bold buddy risks higher difficulty.\n"
+        f"Reply with EXACTLY one JSON object: {{\"quest_id\": \"<id>\", \"reason\": \"<short sentence>\"}}\n"
+    )
+
+    system_prompt = (
+        "You are a JSON-only decision oracle for an RPG pet game. "
+        "Reply with EXACTLY one JSON object matching: "
+        '{\"quest_id\": str, \"reason\": str}. '
+        "No prose, no markdown, no code fences."
+    )
+
+    cmd = [
+        claude_bin, "-p", prompt,
+        "--system-prompt", system_prompt,
+        "--setting-sources", "local",
+        "--strict-mcp-config",
+        "--disable-slash-commands",
+        "--output-format", "json",
+        "--model", _LLM_MODEL_ID,
+        "--tools", "",
+    ]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=_LLM_TIMEOUT_S)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        _llm_fail()
+        return None
+    if res.returncode != 0:
+        _llm_fail()
+        return None
+    try:
+        envelope = json.loads(res.stdout)
+    except json.JSONDecodeError:
+        _llm_fail()
+        return None
+    result_raw = envelope.get("result")
+    if not isinstance(result_raw, str):
+        _llm_fail()
+        return None
+    parsed = _extract_json_object(result_raw)
+    if parsed is None:
+        _llm_fail()
+        return None
+    qid = parsed.get("quest_id")
+    if not isinstance(qid, str) or qid not in qdef_map:
+        _llm_fail()
+        return None
+    _llm_failures = 0  # success — reset breaker
+    return qdef_map[qid], prob_map[qid]
+
+
 def pick_quest_for_buddy(
     buddy: Buddy, zone_id: str, rng: Optional[random.Random] = None
 ) -> tuple[QuestDef, float]:
-    """Smart selection: weight each quest in the zone by the buddy's success
-    probability squared, so the buddy leans toward quests it's well-suited
-    for while still leaving room for variance. Returns (quest, probability).
+    """Smart selection: try an LLM pick first (Claude chooses the quest the
+    buddy feels confident about), then fall back to a dice-weighted pick.
+    Returns (quest, probability).
     """
     zone = get_zone(zone_id)
-    r = rng or random
     qdefs = [QUESTS[qid] for qid in zone.quest_ids]
+
+    # Try LLM pick first
+    llm_result = _pick_quest_via_llm(buddy, zone_id, qdefs)
+    if llm_result is not None:
+        return llm_result
+
+    # Fallback: dice-based weighted pick
+    r = rng or random
     probs = [_success_probability(buddy, q) for q in qdefs]
     weights = [max(0.05, p) ** 2 for p in probs]
     idx = r.choices(range(len(qdefs)), weights=weights, k=1)[0]

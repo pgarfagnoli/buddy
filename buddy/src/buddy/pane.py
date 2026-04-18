@@ -18,7 +18,7 @@ import time
 import traceback
 from typing import Optional
 
-from . import combat, leveling, paths, personalities, quests, skills, species
+from . import combat, leveling, paths, personalities, quests, skills, species, vignettes
 from .state import State, drain_xp_log, load_state, mutate_state
 
 _LOGGED_EXC_SIGS: set[str] = set()
@@ -48,6 +48,8 @@ def _log_pane_exception(ctx: str, exc: BaseException) -> None:
 TICK_HZ = 1.0
 BAR_WIDTH = 14
 FLAVOR_CHANCE = 0.15
+COMBAT_POSE_HOLD_S = 1.2  # how long a strike holds its attack/hurt pose
+IDLE_VIGNETTE_PERIOD_S = 25  # rotate the under-sprite vignette this often when idle
 
 # ANSI
 CSI = "\x1b["
@@ -111,23 +113,89 @@ def _wrap_plain(text: str, width: int) -> list[str]:
     return lines or [text]
 
 
+def _combat_poses(now: float, last_round_at: int, last_attacker: Optional[str]) -> tuple[str, str]:
+    """Return (buddy_pose, enemy_pose) where each is 'idle', 'attack', or 'hurt'.
+
+    During the COMBAT_POSE_HOLD_S window after the most recent round, the
+    attacker shows in attack pose and the defender in hurt pose. Outside
+    that window, both return to idle.
+    """
+    if last_attacker is None or now - last_round_at > COMBAT_POSE_HOLD_S:
+        return "idle", "idle"
+    if last_attacker == "buddy":
+        return "attack", "hurt"
+    if last_attacker == "enemy":
+        return "hurt", "attack"
+    return "idle", "idle"
+
+
+def _pick_pose_frame(
+    pose: str,
+    idle: list[list[str]] | tuple[tuple[str, ...], ...],
+    attack: list[list[str]] | tuple[tuple[str, ...], ...],
+    hurt: list[list[str]] | tuple[tuple[str, ...], ...],
+    tick: int,
+) -> list[str]:
+    """Pick one frame from the matching bank, falling back to idle if the
+    requested bank is empty.
+    """
+    bank = idle
+    if pose == "attack" and attack:
+        bank = attack
+    elif pose == "hurt" and hurt:
+        bank = hurt
+    if not bank:
+        return [""]
+    frame = bank[(tick // 2) % len(bank)]
+    return list(frame)
+
+
+def _side_by_side(left: list[str], right: list[str], gap: int = 2) -> list[str]:
+    """Stack two ASCII frames side-by-side, padding the shorter one to match."""
+    h = max(len(left), len(right))
+    lw = max((len(line) for line in left), default=0)
+    out: list[str] = []
+    for i in range(h):
+        l = left[i] if i < len(left) else ""
+        r = right[i] if i < len(right) else ""
+        out.append(l.ljust(lw) + " " * gap + r)
+    return out
+
+
 class FlavorTicker:
     def __init__(self, capacity: int = 5) -> None:
         self.lines: list[str] = []
         self.capacity = capacity
         self.rng = random.Random()
+        self.idle_vignette: str = ""
+        self.idle_vignette_at: float = 0.0
 
     def maybe_tick(self, state: State) -> None:
-        if state.buddy is None or state.buddy.quest is None:
+        b = state.buddy
+        if b is None:
             return
-        if self.rng.random() > FLAVOR_CHANCE:
+        if b.quest is not None:
+            # Mid-quest flavor: chance-gated draw from the quest's flavor pool.
+            if self.rng.random() > FLAVOR_CHANCE:
+                return
+            try:
+                line = quests.pick_flavor_line(b.quest.id, b.name, self.rng)
+            except Exception as exc:
+                _log_pane_exception("ticker.pick_flavor_line", exc)
+                return
+            self.push(line)
+            return
+        # Idle: rotate a vignette from the trait-weighted pool every
+        # IDLE_VIGNETTE_PERIOD_S seconds. Decoupled from the activity loop.
+        now = time.time()
+        if now - self.idle_vignette_at < IDLE_VIGNETTE_PERIOD_S:
             return
         try:
-            line = quests.pick_flavor_line(state.buddy.quest.id, state.buddy.name, self.rng)
+            v = vignettes.pick(b, self.rng)
+            self.idle_vignette = vignettes.render(v, b)
+            self.idle_vignette_at = now
         except Exception as exc:
-            _log_pane_exception("ticker.pick_flavor_line", exc)
-            return
-        self.push(line)
+            _log_pane_exception("ticker.idle_vignette", exc)
 
     def push(self, line: str) -> None:
         self.lines.append(line)
@@ -153,19 +221,72 @@ def _render(state: State, ticker: FlavorTicker, tick: int, cols: int, rows: int)
     # sprite: cycle through N frames at 2s each. When on an in-progress
     # quest, prefer the species's own motion bank, then fall back to the
     # shared "away" frames, then to the species idle frames.
-    if b.quest is not None and b.quest.remaining() > 0:
-        own_motion = species.species_motion_frames(b.species)
-        if own_motion:
-            frames = own_motion
-        else:
-            shared = species.quest_sprite_frames()
-            frames = shared if shared else species.sprite_frames(b.species)
+    # In combat: render buddy + enemy side-by-side with attack/hurt poses
+    # that flash for COMBAT_POSE_HOLD_S after each round.
+    if b.combat is not None:
+        try:
+            enemy = combat.get_enemy(b.combat.enemy_id)
+            esprite = combat.get_enemy_sprite(b.combat.enemy_id)
+            buddy_pose, enemy_pose = _combat_poses(
+                time.time(), b.combat.last_round_at, b.combat.last_attacker,
+            )
+            buddy_frame = _pick_pose_frame(
+                buddy_pose,
+                species.sprite_frames(b.species),
+                species.attack_frames(b.species),
+                species.hurt_frames(b.species),
+                tick,
+            )
+            enemy_frame = _pick_pose_frame(
+                enemy_pose, esprite.idle, esprite.attack, esprite.hurt, tick,
+            )
+            stacked = _side_by_side(buddy_frame, enemy_frame, gap=3)
+            ecolor = FG_RED
+            for line in stacked:
+                out.append("  " + color + line + RESET + "\n")
+            # Inline label row right under the sprites.
+            buddy_label = b.name
+            enemy_label = enemy.name
+            label_left = buddy_label.ljust(max(
+                (len(line) for line in buddy_frame), default=0
+            ))
+            out.append(
+                "  " + color + label_left + RESET
+                + "   " + ecolor + enemy_label + RESET + "\n"
+            )
+            out.append("\n")
+        except Exception as exc:
+            _log_pane_exception("render.combat_sprites", exc)
+            # Fall back to the plain buddy sprite if anything goes wrong.
+            for line in species.sprite_frames(b.species)[0]:
+                out.append("  " + color + line + RESET + "\n")
+            out.append("\n")
     else:
-        frames = species.sprite_frames(b.species)
-    frame_idx = (tick // 2) % max(1, len(frames))
-    for line in frames[frame_idx]:
-        out.append("  " + color + line + RESET + "\n")
-    out.append("\n")
+        if b.quest is not None and b.quest.remaining() > 0:
+            own_motion = species.species_motion_frames(b.species)
+            if own_motion:
+                frames = own_motion
+            else:
+                shared = species.quest_sprite_frames()
+                frames = shared if shared else species.sprite_frames(b.species)
+        else:
+            frames = species.sprite_frames(b.species)
+        frame_idx = (tick // 2) % max(1, len(frames))
+        for line in frames[frame_idx]:
+            out.append("  " + color + line + RESET + "\n")
+        out.append("\n")
+
+        # Idle vignette — render under the sprite when the buddy is idle
+        # (no active quest). The pane's FlavorTicker rotates a fresh vignette
+        # every IDLE_VIGNETTE_PERIOD_S seconds; b.idle_flavor (written by the
+        # activity loop on its slow tick) is the persistent fallback that
+        # covers the first ~25s after a fresh pane spawn.
+        if b.quest is None:
+            flavor = ticker.idle_vignette or b.idle_flavor
+            if flavor:
+                for piece in _wrap_plain(flavor, max(1, cols - 2)):
+                    out.append(f"  {DIM}{FG_CYAN}{piece}{RESET}\n")
+                out.append("\n")
 
     # Pre-compute branch eligibility once — used for both the ✨ flash
     # next to the level and the EVOLVE notice block below the name.
@@ -331,21 +452,43 @@ def _sigterm_handler(signum, frame):  # noqa: ARG001
     sys.exit(0)
 
 
-def _drain_and_apply() -> None:
+def _tick_state(rng: random.Random) -> State:
+    """Single-pass pane tick: drain XP events, advance combat, return state.
+
+    Optimized to minimize flock acquisitions:
+    - If no XP events AND combat is in WAITING (strike interval not elapsed),
+      skip the exclusive flock entirely and return a read-only state snapshot.
+    - Otherwise, batch drain + combat into one mutate_state call.
+    """
     events = drain_xp_log()
+
+    # Fast path: if nothing to drain, check if we can skip the flock.
     if not events:
-        return
-    def fn(state: State) -> None:
-        leveling.apply_xp_events(state, events)
-    try:
-        mutate_state(fn)
-    except Exception:
-        pass
+        try:
+            state = load_state()
+        except Exception:
+            return State()
+        b = state.buddy
+        if b is None or b.quest is None:
+            return state  # idle — nothing to mutate
+        if b.combat is not None:
+            # Combat active — check if either side is ready to strike.
+            now = int(time.time())
+            buddy_ready = (
+                b.combat.next_buddy_strike_at == 0
+                or now >= b.combat.next_buddy_strike_at
+            )
+            enemy_ready = (
+                b.combat.next_enemy_strike_at == 0
+                or now >= b.combat.next_enemy_strike_at
+            )
+            if not buddy_ready and not enemy_ready:
+                return state  # WAITING — skip flock, no mutation needed
 
-
-def _advance_combat(rng: random.Random) -> None:
-    """Spawn or tick a combat encounter for the active quest, if any."""
+    # Slow path: something needs mutating. Single flock for everything.
     def fn(state: State) -> None:
+        if events:
+            leveling.apply_xp_events(state, events)
         b = state.buddy
         if b is None or b.quest is None:
             return
@@ -355,39 +498,74 @@ def _advance_combat(rng: random.Random) -> None:
             return
         now = int(time.time())
         if b.combat is None:
-            # Hearty: regen a point of HP between encounters on combat quests.
             if qdef.category == "combat":
                 skills.try_out_of_combat_regen(b)
-            combat.try_spawn(b, qdef, now, rng)
+            spawned = combat.try_spawn(b, qdef, now, rng)
+            if spawned and b.combat is not None:
+                try:
+                    enemy_name = combat.get_enemy(b.combat.enemy_id).name
+                    state.add_event(f"{b.name} engages a {enemy_name}!")
+                except KeyError:
+                    pass
             return
+        prev_enemy_id = b.combat.enemy_id
+        prev_xp = b.xp
         result = combat.tick_encounter(b, qdef, now, rng)
+        if result == combat.TickResult.BUDDY_WIN:
+            try:
+                enemy_name = combat.get_enemy(prev_enemy_id).name
+                gained = b.xp - prev_xp
+                state.add_event(f"{b.name} defeats the {enemy_name} (+{gained} xp)")
+                leveling.check_level_ups(state)
+            except KeyError:
+                pass
+            return
+        if result == combat.TickResult.ONGOING and b.combat is None:
+            try:
+                enemy_name = combat.get_enemy(prev_enemy_id).name
+                state.add_event(f"{b.name} slips away from the {enemy_name}")
+            except KeyError:
+                pass
+            return
         if result == combat.TickResult.BUDDY_DOWN:
             try:
                 res = quests.fail_from_combat(b, rng)
             except ValueError:
                 return
-            hints: list[str] = [f"~{int(round(res.probability * 100))}% odds"]
-            if res.weakest_stat:
-                hints.append(f"{res.weakest_stat.rstrip('_')} was weakest")
             fired_names: list[str] = []
             for sid in res.fired_skills:
                 try:
                     fired_names.append(skills.get(sid).name)
                 except KeyError:
                     fired_names.append(sid)
-            line = f"{res.flavor} [{', '.join(hints)}]"
-            line += f" (+{res.xp} xp"
-            if res.hp_damage:
-                line += f", -{res.hp_damage} hp"
-            if fired_names:
-                line += f", used {', '.join(fired_names)}"
-            line += ")"
-            state.add_event(line)
+            state.add_event(quests.format_claim_event_line(res, fired_names))
             leveling.check_level_ups(state)
     try:
-        mutate_state(fn)
+        return mutate_state(fn)
     except Exception as exc:
-        _log_pane_exception("advance_combat", exc)
+        _log_pane_exception("tick_state", exc)
+        try:
+            return load_state()
+        except Exception:
+            return State()
+
+
+def _state_signature(state: State) -> Optional[tuple]:
+    """Cheap fingerprint of the fields that affect render output.
+    Returns None if no buddy (always rebuild).
+    """
+    b = state.buddy
+    if b is None:
+        return None
+    return (
+        b.current_hp, b.current_mana, b.xp, b.mood, b.stamina,
+        b.quest.id if b.quest else None,
+        b.quest.remaining() if b.quest else None,
+        b.combat.enemy_hp if b.combat else None,
+        b.combat.last_attacker if b.combat else None,
+        b.idle_flavor,
+        b.stat_points_unspent,
+    )
 
 
 def main() -> int:
@@ -403,24 +581,36 @@ def main() -> int:
 
     ticker = FlavorTicker()
     tick = 0
+    last_sig: Optional[tuple] = None
+    last_frame = ""
     try:
         while True:
             try:
-                _drain_and_apply()
-                _advance_combat(ticker.rng)
-                try:
-                    state = load_state()
-                except Exception:
-                    state = State()
+                state = _tick_state(ticker.rng)
                 cols, rows = _term_size()
                 ticker.maybe_tick(state)
-                frame = _render(state, ticker, tick, cols, rows)
+                # Render cache: skip rebuild if state hasn't changed,
+                # but force every 2 ticks for sprite animation cycling.
+                sig = _state_signature(state)
+                if sig != last_sig or tick % 2 == 0:
+                    frame = _render(state, ticker, tick, cols, rows)
+                    last_sig = sig
+                    last_frame = frame
+                else:
+                    frame = last_frame
                 sys.stdout.write(frame)
                 sys.stdout.flush()
             except Exception as exc:
                 _log_pane_exception("main_loop", exc)
             tick += 1
-            time.sleep(1.0 / TICK_HZ)
+            # Adaptive tick: 1 Hz during quest/combat, 0.25 Hz when idle.
+            # Reduces file I/O by 75% when nothing is happening. Vignette
+            # rotation (25s period) still works — it checks wall clock.
+            b = state.buddy
+            if b and (b.quest or b.combat):
+                time.sleep(1.0 / TICK_HZ)
+            else:
+                time.sleep(4.0)
     except KeyboardInterrupt:
         pass
     finally:

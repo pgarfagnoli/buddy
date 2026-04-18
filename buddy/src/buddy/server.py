@@ -117,10 +117,45 @@ def _snapshot(state: State) -> dict[str, Any]:
             "cap_total": 40,
             "cap_per_stat": 15,
         }
+    # Pre-formatted display for fast relay by Claude — avoids expensive
+    # reasoning over the raw JSON on every /buddy status call.
+    lines: list[str] = []
+    lines.append(
+        f"{b.name} ({display_name} Lv{b.level})  "
+        f"HP {b.current_hp}/{b.max_hp}  MP {b.current_mana}/{b.max_mana}  "
+        f"XP {b.xp}/{bd['xp_to_next']}"
+    )
+    s = b.stats
+    lines.append(f"ATK {s.atk}  DEF {s.def_}  SPD {s.spd}  LUCK {s.luck}  INT {s.int_}  RES {s.res}")
+    if b.stat_points_unspent:
+        lines.append(f"{b.stat_points_unspent} unspent stat points")
+    if b.quest:
+        q = bd["quest"]
+        if q["done"]:
+            lines.append(f"Quest: {q['name']} — done! Run /buddy claim")
+        else:
+            lines.append(f"Quest: {q['name']} — {q['remaining_s']}s left")
+    else:
+        lines.append("Quest: idle")
+    if b.active_skills:
+        lines.append(f"Skills: {', '.join(b.active_skills)}")
+    if state.recent_events:
+        for ev in state.recent_events[-3:]:
+            lines.append(ev)
+    evo = bd.get("evolution_ready")
+    if evo:
+        if evo["at_or_past_level"] and evo["any_eligible"]:
+            names = [br["display_name"] for br in evo["branches"] if br["eligible"]]
+            lines.append(f"Evolution ready: {', '.join(names)} — run /buddy evolve")
+        elif not evo["at_or_past_level"]:
+            lines.append(f"Evolution at Lv{evo['trigger_level']} (current Lv{b.level})")
+    bd["display"] = "\n".join(lines)
+
     return {
         "buddy": bd,
         "recent_events": list(state.recent_events[-5:]),
         "activity_loop": _loop_health(state),
+        "display": bd["display"],
     }
 
 
@@ -132,11 +167,28 @@ def get_buddy() -> dict[str, Any]:
 
     Call this first if the user asks about their buddy's status. If the returned
     `buddy` field is null, prompt the user to pick a starter via list_species + choose_buddy.
+
+    Auto-claims any finished quest that the activity loop and pane missed
+    (e.g., both processes were dead while the quest timer expired).
     """
     events = drain_xp_log()
 
     def fn(state: State) -> None:
         _sync_apply(state, events)
+        b = state.buddy
+        if b is not None and b.quest is not None and b.quest.is_done():
+            try:
+                result = quests.claim(b)
+                fired_names: list[str] = []
+                for sid in result.fired_skills:
+                    try:
+                        fired_names.append(skills.get(sid).name)
+                    except KeyError:
+                        fired_names.append(sid)
+                state.add_event(quests.format_claim_event_line(result, fired_names))
+                leveling.check_level_ups(state)
+            except ValueError:
+                pass  # quest not actually done (race) — ignore
 
     state = mutate_state(fn)
     return _snapshot(state)
@@ -582,6 +634,18 @@ def list_zones() -> list[dict[str, Any]]:
                 f"{min(q.duration_s for q in qdefs) // 60}m",
                 f"{max(q.duration_s for q in qdefs) // 60}m",
             ],
+            "quests": [
+                {
+                    "id": q.id,
+                    "name": q.name,
+                    "key_stats": [k.rstrip("_") for k in q.key_stats],
+                    "difficulty": q.difficulty,
+                    "category": q.category,
+                    "duration_human": f"{q.duration_s // 60}m",
+                    "blurb": q.blurb,
+                }
+                for q in qdefs
+            ],
         })
     return out
 
@@ -615,6 +679,12 @@ def start_quest(zone_id: str) -> dict[str, Any]:
 
     snap = _snapshot(mutate_state(fn))
     snap.update(rolled)
+    snap["display"] = (
+        f"{snap['buddy']['name']} set off to {rolled['rolled_quest_name']} "
+        f"(~{int(rolled['estimated_success'] * 100)}% success, "
+        f"{snap['buddy']['quest']['remaining_s']}s). "
+        f"Run /buddy claim when done."
+    )
     return snap
 
 
@@ -650,20 +720,7 @@ def claim_quest() -> dict[str, Any]:
             except KeyError:
                 fired_names.append(sid)
 
-        line = result.flavor
-        if not result.success:
-            hints: list[str] = [f"~{int(round(result.probability * 100))}% odds"]
-            if result.weakest_stat:
-                hints.append(f"{result.weakest_stat.rstrip('_')} was weakest")
-            if result.defeated_by:
-                hints.append(f"lost to a {result.defeated_by}")
-            line += f" [{', '.join(hints)}]"
-        line += (f" (+{result.xp} xp"
-                 + (f", got {', '.join(result.items)}" if result.items else "")
-                 + (f", -{result.hp_damage} hp" if result.hp_damage else "")
-                 + (f", cast -{result.mana_cost} mp" if result.mana_cast else "")
-                 + (f", used {', '.join(fired_names)}" if fired_names else "") + ")")
-        state.add_event(line)
+        state.add_event(quests.format_claim_event_line(result, fired_names))
         leveling.check_level_ups(state)
 
         captured["result"] = result
@@ -689,6 +746,7 @@ def claim_quest() -> dict[str, Any]:
         "mana_cost": result.mana_cost,
         "mana_cast": result.mana_cast,
     }
+    snap["display"] = quests.format_claim_event_line(result, captured["fired_names"])
     return snap
 
 
@@ -879,6 +937,7 @@ def start_pane() -> dict[str, Any]:
             "pane_id": existing["pane_id"],
             "pid": existing["pid"],
             "activity_loop": _activity_loop_status(),
+            "display": "Pane already running.",
         }
 
     # Spawn the pane. Use sys.executable so we match the MCP server's Python exactly.
@@ -913,6 +972,7 @@ def start_pane() -> dict[str, Any]:
         "pane_id": pane_id,
         "pid": pid,
         "activity_loop": loop_status,
+        "display": "Buddy pane spawned.",
     }
 
 
@@ -954,7 +1014,20 @@ def stop_pane() -> dict[str, Any]:
         "pane_id": pane_id,
         "pid": pid,
         "activity_loop": loop_status,
+        "display": "Pane stopped.",
     }
+
+
+@mcp.tool()
+def refresh_pane() -> dict[str, Any]:
+    """Stop and restart the buddy sidecar pane in one call."""
+    try:
+        stop_pane()
+    except Exception:
+        pass
+    result = start_pane()
+    result["display"] = "Sidebar pane refreshed."
+    return result
 
 
 @mcp.tool()

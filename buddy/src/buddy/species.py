@@ -215,6 +215,7 @@ SPECIES: dict[str, Species] = {
         evolutions=(
             Evolution("rooster", requirements={"atk": 12, "spd": 12}, stat_bonus={"hp": 3, "atk": 4, "spd": 3}),
             Evolution("hen", requirements={"def_": 12}, stat_bonus={"hp": 5, "def_": 3, "luck": 2}),
+            Evolution("kakapo", requirements={"def_": 8, "luck": 8}, stat_bonus=_TIER_2_BONUS),
         ),
         evolves_at=TIER_1_LEVEL,
     ),
@@ -348,6 +349,7 @@ SPECIES: dict[str, Species] = {
         base_hp=14, base_atk=7, base_def=5, base_spd=13, base_luck=7,
         blurb="A long-legged sprinter. Clears a meadow in a heartbeat.",
         evolutions=(Evolution("jackrabbit", requirements={"spd": 16}, stat_bonus=_TIER_2_BONUS),),
+        inherent_skills=("scout",),  # carried over from rabbit pre-evolution
         sprite_fallback="rabbit", is_starter=False, evolves_at=TIER_2_LEVEL,
     ),
     "lop_rabbit": Species(
@@ -361,7 +363,7 @@ SPECIES: dict[str, Species] = {
         id="brown_rat", display_name="Brown Rat", kind="beast",
         base_hp=12, base_atk=8, base_def=6, base_spd=8, base_luck=9,
         blurb="A cunning scavenger. Thinks its way through trouble.",
-        evolutions=(Evolution("capybara", requirements={"luck": 16}, stat_bonus=_TIER_2_BONUS),),
+        evolutions=(Evolution("capybara", requirements={"luck": 16}, stat_bonus=_TIER_2_BONUS), Evolution("glacier_rat", requirements={"hp": 28, "res": 28}, stat_bonus=_TIER_3_BONUS),),
         sprite_fallback="field_mouse", is_starter=False, evolves_at=TIER_2_LEVEL,
     ),
     "dormouse": Species(
@@ -420,7 +422,10 @@ SPECIES: dict[str, Species] = {
         id="wasp", display_name="Wasp", kind="insect",
         base_hp=9, base_atk=14, base_def=3, base_spd=13, base_luck=5,
         blurb="A paper-nest menace. Faster and meaner than it looks.",
-        evolutions=(Evolution("giant_hornet", requirements={"atk": 16}, stat_bonus=_TIER_2_BONUS),),
+        evolutions=(
+            Evolution("giant_hornet", requirements={"atk": 16}, stat_bonus=_TIER_2_BONUS),
+            Evolution("praying_mantis", requirements={"atk": 16, "spd": 16}, stat_bonus=_TIER_3_BONUS),
+        ),
         sprite_fallback="bee", is_starter=False, evolves_at=TIER_2_LEVEL,
     ),
     "bumblebee": Species(
@@ -478,7 +483,10 @@ SPECIES: dict[str, Species] = {
         id="tree_frog", display_name="Tree Frog", kind="amphibian",
         base_hp=13, base_atk=6, base_def=5, base_spd=12, base_luck=10,
         blurb="A vivid climber. Sticky pads, sharp eye.",
-        evolutions=(Evolution("cane_toad", requirements={"spd": 16}, stat_bonus=_TIER_2_BONUS),),
+        evolutions=(
+            Evolution("cane_toad", requirements={"spd": 16}, stat_bonus=_TIER_2_BONUS),
+            Evolution("purple_frog", requirements={"def_": 16, "res": 16}, stat_bonus=_TIER_3_BONUS),
+        ),
         sprite_fallback="froglet", is_starter=False, evolves_at=TIER_2_LEVEL,
     ),
     "bullfrog": Species(
@@ -652,7 +660,10 @@ SPECIES: dict[str, Species] = {
         id="snapping_turtle", display_name="Snapping Turtle", kind="reptile",
         base_hp=17, base_atk=8, base_def=13, base_spd=3, base_luck=6,
         blurb="A hinge-jawed ambusher. Do not offer a finger.",
-        evolutions=(Evolution("alligator_snapping_turtle", requirements={"def_": 16}, stat_bonus=_TIER_2_BONUS),),
+        evolutions=(
+            Evolution("alligator_snapping_turtle", requirements={"def_": 16}, stat_bonus=_TIER_2_BONUS),
+            Evolution("leatherback_turtle", requirements={"def_": 16, "hp": 16}, stat_bonus=_TIER_3_BONUS),
+        ),
         sprite_fallback="hatchling_turtle", is_starter=False, evolves_at=TIER_2_LEVEL,
     ),
     "box_turtle": Species(
@@ -720,6 +731,7 @@ SPECIES: dict[str, Species] = {
         evolutions=(
             Evolution("prairie_dog", requirements={"atk": 28, "spd": 28}, stat_bonus=_TIER_3_BONUS),
             Evolution("red_fox_kit", requirements={"def_": 28, "int_": 28}, stat_bonus=_TIER_3_BONUS),
+            Evolution("cave_mole", requirements={"def_": 16, "res": 16}, stat_bonus=_TIER_4_BONUS),
         ),
         sprite_fallback="squirrel", is_starter=False, evolves_at=TIER_3_LEVEL,
     ),
@@ -731,6 +743,7 @@ SPECIES: dict[str, Species] = {
             Evolution("armadillo", requirements={"atk": 28, "spd": 28}, stat_bonus=_TIER_3_BONUS),
             Evolution("mountain_mole", requirements={"def_": 28, "int_": 28}, stat_bonus=_TIER_3_BONUS),
         ),
+        inherent_skills=("hearty",),  # granted on evolution from porcupine
         sprite_fallback="hedgehog", is_starter=False, evolves_at=TIER_3_LEVEL,
     ),
 
@@ -751,7 +764,6 @@ SPECIES: dict[str, Species] = {
         blurb="A murder in airborne form. A single sting is an event.",
         evolutions=(
             Evolution("velvet_ant", requirements={"atk": 28, "spd": 28}, stat_bonus=_TIER_3_BONUS),
-            Evolution("moth_wasp", requirements={"def_": 28, "int_": 28}, stat_bonus=_TIER_3_BONUS),
         ),
         sprite_fallback="bee", is_starter=False, evolves_at=TIER_3_LEVEL,
     ),
@@ -783,7 +795,6 @@ SPECIES: dict[str, Species] = {
         blurb="The biggest frog on earth. Leaps ten feet on a whim.",
         evolutions=(
             Evolution("beelzebufo", requirements={"atk": 28, "spd": 28}, stat_bonus=_TIER_3_BONUS),
-            Evolution("axolot_serpent", requirements={"def_": 28, "int_": 28}, stat_bonus=_TIER_3_BONUS),
         ),
         sprite_fallback="tadpole", is_starter=False, evolves_at=TIER_3_LEVEL,
     ),
@@ -813,7 +824,6 @@ SPECIES: dict[str, Species] = {
         blurb="A blind cave-dweller. Lives a century without seeing the sun.",
         evolutions=(
             Evolution("waterdog", requirements={"atk": 28, "spd": 28}, stat_bonus=_TIER_3_BONUS),
-            Evolution("pond_wyrm", requirements={"def_": 28, "int_": 28}, stat_bonus=_TIER_3_BONUS),
         ),
         sprite_fallback="axolotl", is_starter=False, evolves_at=TIER_3_LEVEL,
     ),
@@ -909,7 +919,6 @@ SPECIES: dict[str, Species] = {
         blurb="A spotted nocturnal hunter. Calm, patient, deadly for crickets.",
         evolutions=(
             Evolution("crested_gecko", requirements={"atk": 28, "spd": 28}, stat_bonus=_TIER_3_BONUS),
-            Evolution("skink_cousin", requirements={"def_": 28, "int_": 28}, stat_bonus=_TIER_3_BONUS),
         ),
         sprite_fallback="baby_gecko", is_starter=False, evolves_at=TIER_3_LEVEL,
     ),
@@ -917,9 +926,7 @@ SPECIES: dict[str, Species] = {
         id="alligator_snapping_turtle", display_name="Alligator Snapping Turtle", kind="reptile",
         base_hp=25, base_atk=13, base_def=18, base_spd=5, base_luck=8,
         blurb="A prehistoric jaw. Tongue-lure like a worm. Do not investigate.",
-        evolutions=(
-            Evolution("leatherback_turtle", requirements={"atk": 28, "spd": 28}, stat_bonus=_TIER_3_BONUS),
-            Evolution("baby_crocodile", requirements={"def_": 28, "int_": 28}, stat_bonus=_TIER_3_BONUS),
+        evolutions=(            Evolution("baby_crocodile", requirements={"def_": 28, "int_": 28}, stat_bonus=_TIER_3_BONUS),
         ),
         sprite_fallback="hatchling_turtle", is_starter=False, evolves_at=TIER_3_LEVEL,
     ),
@@ -937,9 +944,7 @@ SPECIES: dict[str, Species] = {
         id="komodo_dragon", display_name="Komodo Dragon", kind="reptile",
         base_hp=22, base_atk=16, base_def=13, base_spd=11, base_luck=8,
         blurb="The world's largest lizard. Venom-mouthed, ten feet of trouble.",
-        evolutions=(
-            Evolution("megalania", requirements={"atk": 28, "spd": 28}, stat_bonus=_TIER_3_BONUS),
-            Evolution("fat_tail_lizard", requirements={"def_": 28, "int_": 28}, stat_bonus=_TIER_3_BONUS),
+        evolutions=(            Evolution("fat_tail_lizard", requirements={"def_": 28, "int_": 28}, stat_bonus=_TIER_3_BONUS),
         ),
         sprite_fallback="skink", is_starter=False, evolves_at=TIER_3_LEVEL,
     ),
@@ -988,6 +993,7 @@ SPECIES: dict[str, Species] = {
         base_hp=20, base_atk=17, base_def=10, base_spd=19, base_luck=12,
         blurb="A chrome-flanked ambusher. Needle teeth, faster than a thought.",
         evolutions=(Evolution("mako_shark", requirements={"spd": 44}, stat_bonus=_TIER_4_BONUS),),
+        inherent_skills=("vicious_strike",),  # granted on evolution from flounder
         sprite_fallback="guppy", is_starter=False, evolves_at=TIER_4_LEVEL,
     ),
 
@@ -1006,14 +1012,22 @@ SPECIES: dict[str, Species] = {
         id="golden_eagle", display_name="Golden Eagle", kind="avian",
         base_hp=23, base_atk=20, base_def=11, base_spd=19, base_luck=13,
         blurb="A mountain hunter with a seven-foot wingspan. Takes foxes and wolves whole.",
-        evolutions=(Evolution("harpy_eagle", requirements={"atk": 62}, stat_bonus=_TIER_5_BONUS),),
+        evolutions=(
+            Evolution("harpy_eagle", requirements={"atk": 62}, stat_bonus=_TIER_5_BONUS),
+            Evolution("bald_eagle", requirements={"hp": 44, "atk": 44}, stat_bonus=_TIER_4_BONUS),
+            Evolution("philippine_eagle", requirements={"atk": 44, "spd": 44}, stat_bonus=_TIER_6_BONUS),
+        ),
         sprite_fallback="wren", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
     "mako_shark": Species(
         id="mako_shark", display_name="Mako Shark", kind="aquatic",
         base_hp=23, base_atk=21, base_def=13, base_spd=22, base_luck=13,
         blurb="The fastest shark alive. Breaches like a missile, outruns its own prey.",
-        evolutions=(Evolution("great_white_shark", requirements={"spd": 62}, stat_bonus=_TIER_5_BONUS),),
+        evolutions=(
+            Evolution("great_white_shark", requirements={"spd": 62}, stat_bonus=_TIER_5_BONUS),
+            Evolution("livyatan", requirements={"atk": 62, "hp": 62}, stat_bonus=_TIER_5_BONUS),
+            Evolution("frilled_shark", requirements={"int_": 28, "luck": 28}, stat_bonus=_TIER_5_BONUS),
+        ),
         sprite_fallback="guppy", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
 
@@ -1022,7 +1036,10 @@ SPECIES: dict[str, Species] = {
         id="bullet_ant", display_name="Bullet Ant", kind="insect",
         base_hp=24, base_atk=18, base_def=15, base_spd=12, base_luck=8,
         blurb="The most painful sting on record. One is an event; a nest is a catastrophe.",
-        evolutions=(Evolution("titanomyrma", requirements={"atk": 44}, stat_bonus=_TIER_4_BONUS),),
+        evolutions=(
+            Evolution("titanomyrma", requirements={"atk": 44}, stat_bonus=_TIER_4_BONUS),
+            Evolution("vinegaroon", requirements={"int_": 28, "luck": 28}, stat_bonus=_TIER_5_BONUS),
+        ),
         sprite_fallback="ant", is_starter=False, evolves_at=TIER_4_LEVEL,
     ),
     "titanomyrma": Species(
@@ -1064,8 +1081,6 @@ SPECIES: dict[str, Species] = {
         base_hp=28, base_atk=16, base_def=12, base_spd=15, base_luck=13,
         blurb="The largest tree squirrel alive. Runs along branches like a rope-walker.",
         evolutions=(
-            Evolution("cloud_squirrel", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("ironclad_squirrel", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="squirrel", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
@@ -1097,8 +1112,7 @@ SPECIES: dict[str, Species] = {
         base_hp=22, base_atk=27, base_def=11, base_spd=23, base_luck=9,
         blurb="A wasp that hunts tarantulas. Its sting rates a 4 on the pain index.",
         evolutions=(
-            Evolution("venom_general", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("carapace_scout", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
+            Evolution("goliath_birdeater", requirements={"atk": 44, "hp": 44}, stat_bonus=_TIER_4_BONUS),
         ),
         sprite_fallback="bee", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
@@ -1136,7 +1150,7 @@ SPECIES: dict[str, Species] = {
         id="beelzebufo", display_name="Devil Frog", kind="amphibian",
         base_hp=25, base_atk=17, base_def=16, base_spd=13, base_luck=10,
         blurb="The 'devil frog' — extinct, ten pounds, devoured dinosaur hatchlings.",
-        evolutions=(Evolution("koolasuchus", requirements={"atk": 44}, stat_bonus=_TIER_4_BONUS),),
+        evolutions=(Evolution("koolasuchus", requirements={"atk": 44}, stat_bonus=_TIER_4_BONUS), Evolution("pacman_frog", requirements={"atk": 28, "luck": 28}, stat_bonus=_TIER_3_BONUS),),
         sprite_fallback="tadpole", is_starter=False, evolves_at=TIER_4_LEVEL,
     ),
     "koolasuchus": Species(
@@ -1158,16 +1172,14 @@ SPECIES: dict[str, Species] = {
         base_hp=28, base_atk=21, base_def=16, base_spd=14, base_luck=14,
         blurb="The most toxic vertebrate alive. A single frog could kill a hundred men.",
         evolutions=(
-            Evolution("sky_toad", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("stone_toad", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
-        ),
+         Evolution("surinam_horned_frog", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="froglet", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
     "mudpuppy": Species(
         id="mudpuppy", display_name="Mudpuppy", kind="amphibian",
         base_hp=27, base_atk=13, base_def=17, base_spd=10, base_luck=12,
         blurb="A gilled river salamander. Never grows up, never stops hunting.",
-        evolutions=(Evolution("japanese_giant_salamander", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
+        evolutions=(Evolution("japanese_giant_salamander", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS), Evolution("amphiuma", requirements={"def_": 28, "res": 28}, stat_bonus=_TIER_3_BONUS),),
         sprite_fallback="newt", is_starter=False, evolves_at=TIER_4_LEVEL,
     ),
     "japanese_giant_salamander": Species(
@@ -1175,9 +1187,7 @@ SPECIES: dict[str, Species] = {
         base_hp=33, base_atk=16, base_def=21, base_spd=10, base_luck=13,
         blurb="Five feet long, called 'giant pepper fish' for the milky ooze it weeps when alarmed.",
         evolutions=(
-            Evolution("river_king_salamander", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("mountain_salamander", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
-        ),
+            Evolution("mountain_salamander", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),        ),
         sprite_fallback="newt", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
     "waterdog": Species(
@@ -1192,9 +1202,7 @@ SPECIES: dict[str, Species] = {
         base_hp=33, base_atk=17, base_def=21, base_spd=10, base_luck=14,
         blurb="The largest living amphibian. Six feet of slow-river menace.",
         evolutions=(
-            Evolution("thunder_axolotl", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("stone_axolotl", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
-        ),
+         Evolution("andrias_scheuchzeri", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="axolotl", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
 
@@ -1261,7 +1269,7 @@ SPECIES: dict[str, Species] = {
         id="ostrich", display_name="Ostrich", kind="avian",
         base_hp=30, base_atk=19, base_def=14, base_spd=18, base_luck=13,
         blurb="The largest bird on earth. Runs at 45 mph and kicks hard enough to kill a lion.",
-        evolutions=(Evolution("elephant_bird", requirements={"atk": 62}, stat_bonus=_TIER_5_BONUS),),
+        evolutions=(Evolution("elephant_bird", requirements={"atk": 62}, stat_bonus=_TIER_5_BONUS), Evolution("sky_dove", requirements={"spd": 44, "luck": 44}, stat_bonus=_TIER_4_BONUS),),
         sprite_fallback="chick", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
     "shoebill": Species(
@@ -1285,9 +1293,7 @@ SPECIES: dict[str, Species] = {
         base_hp=28, base_atk=20, base_def=17, base_spd=21, base_luck=15,
         blurb="The largest gecko alive. Fifteen inches of island apex predator.",
         evolutions=(
-            Evolution("canopy_gecko_king", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("stone_gecko_elder", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
-        ),
+         Evolution("madagascar_day_gecko", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="baby_gecko", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
     "jackson_chameleon": Species(
@@ -1302,23 +1308,21 @@ SPECIES: dict[str, Species] = {
         base_hp=28, base_atk=20, base_def=18, base_spd=18, base_luck=14,
         blurb="The heaviest chameleon. Lives for a decade in the Madagascar canopy.",
         evolutions=(
-            Evolution("mirage_chameleon", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("fortress_chameleon", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
-        ),
+         Evolution("rhinoceros_iguana", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="anole", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
     "megalania": Species(
         id="megalania", display_name="Giant Monitor Lizard", kind="reptile",
         base_hp=27, base_atk=21, base_def=17, base_spd=13, base_luck=9,
         blurb="An extinct 23-foot monitor lizard. The largest goanna that ever walked Australia.",
-        evolutions=(Evolution("mosasaur", requirements={"atk": 44}, stat_bonus=_TIER_4_BONUS),),
+        evolutions=(Evolution("mosasaur", requirements={"atk": 44}, stat_bonus=_TIER_4_BONUS), Evolution("gila_monster", requirements={"def_": 28, "res": 28}, stat_bonus=_TIER_3_BONUS),),
         sprite_fallback="skink", is_starter=False, evolves_at=TIER_4_LEVEL,
     ),
     "mosasaur": Species(
         id="mosasaur", display_name="Prehistoric Sea Lizard", kind="reptile",
         base_hp=33, base_atk=25, base_def=20, base_spd=15, base_luck=10,
         blurb="An extinct sea-lizard, 50 feet long. Apex predator of the late cretaceous oceans.",
-        evolutions=(Evolution("tylosaurus", requirements={"atk": 62}, stat_bonus=_TIER_5_BONUS),),
+        evolutions=(Evolution("tylosaurus", requirements={"atk": 62}, stat_bonus=_TIER_5_BONUS), Evolution("basilosaurus", requirements={"hp": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="skink", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
 
@@ -1327,10 +1331,7 @@ SPECIES: dict[str, Species] = {
         id="nuralagus", display_name="Island Giant Rabbit", kind="beast",
         base_hp=30, base_atk=13, base_def=13, base_spd=18, base_luck=12,
         blurb="An extinct fox-sized rabbit from Minorca. Slow-hopping, no predators, unafraid.",
-        evolutions=(
-            Evolution("tundra_lynx", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("yeti_hare", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
-        ),
+        evolutions=(         Evolution("secretary_bird", requirements={"spd": 28, "atk": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="rabbit", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
 
@@ -1346,11 +1347,7 @@ SPECIES: dict[str, Species] = {
         id="haast_eagle", display_name="Haast's Eagle", kind="avian",
         base_hp=34, base_atk=31, base_def=16, base_spd=24, base_luck=16,
         blurb="The largest eagle ever to exist. Hunted moa, extinct only 500 years.",
-        evolutions=(
-            Evolution("thunder_eagle", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("shadow_eagle", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
-        sprite_fallback="wren", is_starter=False, evolves_at=TIER_7_LEVEL,
+        sprite_fallback="wren", is_starter=False,
     ),
     "great_white_shark": Species(
         id="great_white_shark", display_name="Great White Shark", kind="aquatic",
@@ -1364,9 +1361,7 @@ SPECIES: dict[str, Species] = {
         base_hp=34, base_atk=34, base_def=21, base_spd=29, base_luck=16,
         blurb="An extinct 60-foot shark. Ate whales whole. There is nothing after this.",
         evolutions=(
-            Evolution("storm_megalodon", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("basalt_megalodon", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
+         Evolution("helicoprion", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="guppy", is_starter=False, evolves_at=TIER_7_LEVEL,
     ),
 
@@ -1376,14 +1371,14 @@ SPECIES: dict[str, Species] = {
         id="phoberomys", display_name="Ancient Giant Rodent", kind="beast",
         base_hp=36, base_atk=16, base_def=18, base_spd=10, base_luck=13,
         blurb="A prehistoric rodent the size of a buffalo. Roamed the Venezuelan wetlands.",
-        evolutions=(Evolution("josephoartigasia", requirements={"def_": 80}, stat_bonus=_TIER_6_BONUS),),
+        evolutions=(Evolution("josephoartigasia", requirements={"def_": 80}, stat_bonus=_TIER_6_BONUS), Evolution("paraceratherium", requirements={"def_": 62, "hp": 62}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="field_mouse", is_starter=False, evolves_at=TIER_6_LEVEL,
     ),
     "doedicurus": Species(
         id="doedicurus", display_name="Mace-Tailed Armadillo", kind="beast",
         base_hp=38, base_atk=17, base_def=28, base_spd=8, base_luck=11,
         blurb="An extinct armored giant. Tail ended in a spiked mace for dueling its own kind.",
-        evolutions=(Evolution("megatherium", requirements={"def_": 80}, stat_bonus=_TIER_6_BONUS),),
+        evolutions=(Evolution("megatherium", requirements={"def_": 80}, stat_bonus=_TIER_6_BONUS), Evolution("woolly_mammoth", requirements={"hp": 80, "def_": 80}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="hedgehog", is_starter=False, evolves_at=TIER_6_LEVEL,
     ),
     "arthropleura": Species(
@@ -1418,7 +1413,7 @@ SPECIES: dict[str, Species] = {
         id="giant_squid", display_name="Giant Squid", kind="aquatic",
         base_hp=30, base_atk=21, base_def=16, base_spd=17, base_luck=17,
         blurb="A 40-foot kraken of the deep. Hunts sperm whales in water humans can't reach.",
-        evolutions=(Evolution("colossal_squid", requirements={"atk": 80}, stat_bonus=_TIER_6_BONUS),),
+        evolutions=(Evolution("colossal_squid", requirements={"atk": 80}, stat_bonus=_TIER_6_BONUS), Evolution("cameroceras", requirements={"def_": 44, "int_": 44}, stat_bonus=_TIER_4_BONUS),),
         sprite_fallback="snail", is_starter=False, evolves_at=TIER_6_LEVEL,
     ),
     "eurypterid": Species(
@@ -1471,9 +1466,7 @@ SPECIES: dict[str, Species] = {
         base_hp=42, base_atk=20, base_def=22, base_spd=12, base_luck=14,
         blurb="The largest rodent that ever lived — over a ton, the size of a bull.",
         evolutions=(
-            Evolution("titan_rat_king", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("burrow_emperor", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
+         Evolution("castoroides", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="field_mouse", is_starter=False, evolves_at=TIER_7_LEVEL,
     ),
     "megatherium": Species(
@@ -1481,29 +1474,21 @@ SPECIES: dict[str, Species] = {
         base_hp=45, base_atk=22, base_def=33, base_spd=8, base_luck=13,
         blurb="A 20-foot Ice Age sloth the weight of an elephant. Clawed its lunch out of trees.",
         evolutions=(
-            Evolution("thunder_sloth", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("bedrock_sloth", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
+         Evolution("eremotherium", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="hedgehog", is_starter=False, evolves_at=TIER_7_LEVEL,
     ),
     "pulmonoscorpius": Species(
         id="pulmonoscorpius", display_name="Giant Land Scorpion", kind="insect",
         base_hp=38, base_atk=30, base_def=26, base_spd=13, base_luck=15,
         blurb="A meter-long prehistoric land scorpion. Lung-breathers from before there were birds.",
-        evolutions=(
-            Evolution("storm_scorpion", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("obelisk_scorpion", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
-        sprite_fallback="ladybug", is_starter=False, evolves_at=TIER_7_LEVEL,
+        sprite_fallback="ladybug", is_starter=False,
     ),
     "meganeuropsis": Species(
         id="meganeuropsis", display_name="Titan Dragonfly", kind="insect",
         base_hp=39, base_atk=18, base_def=26, base_spd=17, base_luck=15,
         blurb="The largest insect that ever lived — 71cm of iridescent, silent death.",
         evolutions=(
-            Evolution("thunder_dragonfly", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("fossil_dragonfly", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
+         Evolution("mongolarachne", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="caterpillar", is_starter=False, evolves_at=TIER_7_LEVEL,
     ),
     "mastodonsaurus": Species(
@@ -1511,9 +1496,7 @@ SPECIES: dict[str, Species] = {
         base_hp=40, base_atk=30, base_def=26, base_spd=16, base_luck=14,
         blurb="A 6-meter extinct amphibian with tusks that pierced its own skull to fit shut.",
         evolutions=(
-            Evolution("thunder_toad", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("basalt_toad", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
+         Evolution("lethiscus", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="tadpole", is_starter=False, evolves_at=TIER_7_LEVEL,
     ),
     "dunkleosteus": Species(
@@ -1521,9 +1504,7 @@ SPECIES: dict[str, Species] = {
         base_hp=40, base_atk=31, base_def=25, base_spd=24, base_luck=13,
         blurb="A Devonian armored fish with self-sharpening blade-plates for teeth.",
         evolutions=(
-            Evolution("apex_kraken_fish", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("armored_leviathan", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
+         Evolution("titanichthys", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="minnow", is_starter=False, evolves_at=TIER_7_LEVEL,
     ),
     "colossal_squid": Species(
@@ -1531,9 +1512,7 @@ SPECIES: dict[str, Species] = {
         base_hp=36, base_atk=27, base_def=20, base_spd=20, base_luck=19,
         blurb="Bigger than a giant squid. Swivel hooks on each arm. Eyes the size of dinner plates.",
         evolutions=(
-            Evolution("thunder_squid", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("abyss_squid", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
+         Evolution("tusoteuthis", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="snail", is_starter=False, evolves_at=TIER_7_LEVEL,
     ),
     "jaekelopterus": Species(
@@ -1541,9 +1520,7 @@ SPECIES: dict[str, Species] = {
         base_hp=38, base_atk=32, base_def=24, base_spd=18, base_luck=14,
         blurb="The largest arthropod that ever lived — 2.5 meters of aquatic pincer.",
         evolutions=(
-            Evolution("storm_euryp", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("cavern_euryp", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
+         Evolution("pterygotus", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="shrimp", is_starter=False, evolves_at=TIER_7_LEVEL,
     ),
     "phorusrhacos": Species(
@@ -1551,9 +1528,7 @@ SPECIES: dict[str, Species] = {
         base_hp=36, base_atk=29, base_def=17, base_spd=24, base_luck=16,
         blurb="A 3-meter flightless carnivore with a beak like an axe. South America's nightmare.",
         evolutions=(
-            Evolution("thunder_runner", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("bedrock_runner", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
+         Evolution("kelenken", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="sparrow", is_starter=False, evolves_at=TIER_7_LEVEL,
     ),
     "moa": Species(
@@ -1561,29 +1536,22 @@ SPECIES: dict[str, Species] = {
         base_hp=42, base_atk=27, base_def=21, base_spd=22, base_luck=15,
         blurb="A 12-foot flightless giant from New Zealand. Extinct within 100 years of human arrival.",
         evolutions=(
-            Evolution("thunder_moa", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("basalt_moa", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
+         Evolution("bullockornis", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="chick", is_starter=False, evolves_at=TIER_7_LEVEL,
     ),
     "pelagornis": Species(
         id="pelagornis", display_name="Toothed Giant Seabird", kind="avian",
         base_hp=38, base_atk=26, base_def=22, base_spd=25, base_luck=15,
         blurb="A 7-meter wingspan and a beak lined with bony 'teeth'. Extinct 3 million years.",
-        evolutions=(
-            Evolution("thunder_seabird", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("cavern_seabird", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
-        sprite_fallback="duckling", is_starter=False, evolves_at=TIER_7_LEVEL,
+        evolutions=(Evolution("osteodontornis", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="duckling", is_starter=False,
     ),
     "meiolania": Species(
         id="meiolania", display_name="Horned Giant Turtle", kind="reptile",
         base_hp=46, base_atk=24, base_def=35, base_spd=10, base_luck=12,
         blurb="An extinct island turtle with horns on its skull and a spiked club tail.",
         evolutions=(
-            Evolution("titan_reef_turtle", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("fortress_shell", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
+         Evolution("protostega", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="hatchling_turtle", is_starter=False, evolves_at=TIER_7_LEVEL,
     ),
     "liopleurodon": Species(
@@ -1591,9 +1559,7 @@ SPECIES: dict[str, Species] = {
         base_hp=44, base_atk=34, base_def=27, base_spd=20, base_luck=12,
         blurb="A 7-meter Jurassic pliosaur. Crocodile-headed terror of the ancient oceans.",
         evolutions=(
-            Evolution("thunder_mosasaur", requirements={"atk": 100, "spd": 100}, stat_bonus=_TIER_7_BONUS),
-            Evolution("bedrock_pliosaur", requirements={"def_": 100, "res": 100}, stat_bonus=_TIER_7_BONUS),
-        ),
+         Evolution("prognathodon", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="skink", is_starter=False, evolves_at=TIER_7_LEVEL,
     ),
 
@@ -1612,6 +1578,7 @@ SPECIES: dict[str, Species] = {
         id="winged_queen", display_name="Winged Queen Ant", kind="insect",
         base_hp=32, base_atk=24, base_def=20, base_spd=14, base_luck=13,
         blurb="A founder matriarch with a coronet of wings. Starts new colonies from the air.",
+        evolutions=(Evolution("myrmecia_bull_ant", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="ant", is_starter=False,
     ),
     "atlas_beetle": Species(
@@ -1630,24 +1597,9 @@ SPECIES: dict[str, Species] = {
         base_hp=26, base_atk=16, base_def=22, base_spd=9, base_luck=9,
         blurb="A head-long duelist with mandibles as long as its body.",
         evolutions=(
-            Evolution("horned_colossus", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("iron_carapace", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="ant", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
-    "horned_colossus": Species(
-        id="horned_colossus", display_name="Horned Colossus Beetle", kind="insect",
-        base_hp=36, base_atk=30, base_def=24, base_spd=12, base_luck=11,
-        blurb="A prehistoric beetle with a rhino horn. Charges straight through whatever's in the way.",
-        sprite_fallback="ant", is_starter=False,
-    ),
-    "iron_carapace": Species(
-        id="iron_carapace", display_name="Iron Carapace Beetle", kind="insect",
-        base_hp=42, base_atk=18, base_def=34, base_spd=7, base_luck=10,
-        blurb="Plated like a castle door. Nothing gets in, including time.",
-        sprite_fallback="ant", is_starter=False,
-    ),
-
     # ═════════════════════════════════════════════════════════════════════
     # Split-and-converge rework — batch 1: rabbit, tadpole, hatchling_turtle,
     # minnow, wren. Each lineage gets branches at tier 2 and at its apex,
@@ -1667,8 +1619,6 @@ SPECIES: dict[str, Species] = {
         base_hp=28, base_atk=12, base_def=17, base_spd=13, base_luck=12,
         blurb="A prehistoric rock-dweller the size of a wild boar.",
         evolutions=(
-            Evolution("pika_ram", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("stone_pika", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="rabbit", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
@@ -1676,76 +1626,24 @@ SPECIES: dict[str, Species] = {
         id="tundra_lynx", display_name="Tundra Lynx", kind="beast",
         base_hp=34, base_atk=22, base_def=16, base_spd=24, base_luck=14,
         blurb="A snow-pawed sprint hunter with tufted ears and silent feet.",
+        evolutions=(Evolution("smilodon", requirements={"atk": 44, "spd": 44}, stat_bonus=_TIER_4_BONUS),),
         sprite_fallback="rabbit", is_starter=False,
     ),
-    "yeti_hare": Species(
-        id="yeti_hare", display_name="Yeti Hare", kind="beast",
-        base_hp=40, base_atk=16, base_def=26, base_spd=14, base_luck=13,
-        blurb="A shaggy mountain giant. Unbothered by blizzards and reasonable arguments.",
-        sprite_fallback="rabbit", is_starter=False,
-    ),
-    "pika_ram": Species(
-        id="pika_ram", display_name="Pika Ram", kind="beast",
-        base_hp=34, base_atk=24, base_def=15, base_spd=22, base_luck=13,
-        blurb="A horned high-altitude brawler. Charges over scree like it's flat.",
-        sprite_fallback="rabbit", is_starter=False,
-    ),
-    "stone_pika": Species(
-        id="stone_pika", display_name="Stone Pika", kind="beast",
-        base_hp=42, base_atk=14, base_def=28, base_spd=12, base_luck=14,
-        blurb="A granite-fleshed boulder of a rodent. Rolls out the welcome mat, then rolls over you.",
-        sprite_fallback="rabbit", is_starter=False,
-    ),
-
     # ─── tadpole lineage (depth 7, tier-3 short branch + tier-7 apex branch) ─
-    "axolot_serpent": Species(
-        id="axolot_serpent", display_name="Serpent Axolotl", kind="amphibian",
-        base_hp=22, base_atk=13, base_def=15, base_spd=13, base_luck=10,
-        blurb="A long-bodied branch of the salamander tree. Slithers more than it hops.",
-        evolutions=(Evolution("sea_eel", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
-        sprite_fallback="tadpole", is_starter=False, evolves_at=TIER_4_LEVEL,
-    ),
     "sea_eel": Species(
         id="sea_eel", display_name="Sea Eel", kind="amphibian",
         base_hp=26, base_atk=17, base_def=17, base_spd=16, base_luck=11,
         blurb="A river-to-ocean rogue. Electric through the dark.",
         evolutions=(
-            Evolution("electric_eel_king", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("mud_basilisk", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="tadpole", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
-    "electric_eel_king": Species(
-        id="electric_eel_king", display_name="Electric Eel King", kind="amphibian",
-        base_hp=32, base_atk=26, base_def=19, base_spd=24, base_luck=13,
-        blurb="A three-meter bolt of stored lightning. One touch stuns a horse.",
-        sprite_fallback="tadpole", is_starter=False,
-    ),
-    "mud_basilisk": Species(
-        id="mud_basilisk", display_name="Mud Basilisk", kind="amphibian",
-        base_hp=38, base_atk=18, base_def=28, base_spd=15, base_luck=14,
-        blurb="A river-bottom hunter with armor plates and an unblinking stare.",
-        sprite_fallback="tadpole", is_starter=False,
-    ),
-    "thunder_toad": Species(
-        id="thunder_toad", display_name="Thunder Toad", kind="amphibian",
-        base_hp=46, base_atk=36, base_def=29, base_spd=22, base_luck=17,
-        blurb="Skin crackling with stored storm. Its croak carries a mile.",
-        sprite_fallback="tadpole", is_starter=False,
-    ),
-    "basalt_toad": Species(
-        id="basalt_toad", display_name="Basalt Toad", kind="amphibian",
-        base_hp=52, base_atk=28, base_def=38, base_spd=15, base_luck=16,
-        blurb="A toad carved out of cooled lava. Shrugs off blows and weathers.",
-        sprite_fallback="tadpole", is_starter=False,
-    ),
-
     # ─── hatchling_turtle lineage (depth 7, tier-3 crocodile branch + tier-7 apex branch) ─
     "baby_crocodile": Species(
         id="baby_crocodile", display_name="Baby Crocodile", kind="reptile",
         base_hp=22, base_atk=14, base_def=15, base_spd=9, base_luck=9,
         blurb="A palm-sized ambush predator. Already knows how to wait.",
-        evolutions=(Evolution("nile_croc", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
+        evolutions=(Evolution("nile_croc", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS), Evolution("gharial", requirements={"spd": 28, "int_": 28}, stat_bonus=_TIER_3_BONUS),),
         sprite_fallback="hatchling_turtle", is_starter=False, evolves_at=TIER_4_LEVEL,
     ),
     "nile_croc": Species(
@@ -1753,16 +1651,10 @@ SPECIES: dict[str, Species] = {
         base_hp=28, base_atk=20, base_def=19, base_spd=11, base_luck=10,
         blurb="Four meters of ambush and bite. Doesn't miss its first lunge.",
         evolutions=(
-            Evolution("saltwater_apex", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
             Evolution("armored_caiman", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
+            Evolution("saltwater_crocodile", requirements={"hp": 62, "atk": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="hatchling_turtle", is_starter=False, evolves_at=TIER_5_LEVEL,
-    ),
-    "saltwater_apex": Species(
-        id="saltwater_apex", display_name="Saltwater Apex", kind="reptile",
-        base_hp=36, base_atk=32, base_def=22, base_spd=22, base_luck=12,
-        blurb="The biggest reptile alive. Runs down anything near the tideline.",
-        sprite_fallback="hatchling_turtle", is_starter=False,
     ),
     "armored_caiman": Species(
         id="armored_caiman", display_name="Armored Caiman", kind="reptile",
@@ -1770,19 +1662,6 @@ SPECIES: dict[str, Species] = {
         blurb="Bone-plated from snout to tail. A pond-bottom fortress.",
         sprite_fallback="hatchling_turtle", is_starter=False,
     ),
-    "titan_reef_turtle": Species(
-        id="titan_reef_turtle", display_name="Titan Reef Turtle", kind="reptile",
-        base_hp=50, base_atk=32, base_def=34, base_spd=24, base_luck=15,
-        blurb="A six-meter ocean-wanderer. Breaches like a whale in slow motion.",
-        sprite_fallback="hatchling_turtle", is_starter=False,
-    ),
-    "fortress_shell": Species(
-        id="fortress_shell", display_name="Fortress Shell", kind="reptile",
-        base_hp=58, base_atk=24, base_def=44, base_spd=10, base_luck=14,
-        blurb="Shell plates as thick as a car door. Indifferent to cannon fire.",
-        sprite_fallback="hatchling_turtle", is_starter=False,
-    ),
-
     # ─── minnow lineage (depth 7, tier-3 shark branch + tier-7 apex branch) ─
     "reef_shark": Species(
         id="reef_shark", display_name="Reef Shark", kind="aquatic",
@@ -1796,36 +1675,10 @@ SPECIES: dict[str, Species] = {
         base_hp=26, base_atk=20, base_def=14, base_spd=21, base_luck=11,
         blurb="An omnivorous hunter that swallows shipwrecks whole.",
         evolutions=(
-            Evolution("siren_shark", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("fortress_shark", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
+            Evolution("whale_shark", requirements={"hp": 44, "def_": 44}, stat_bonus=_TIER_6_BONUS),
         ),
         sprite_fallback="minnow", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
-    "siren_shark": Species(
-        id="siren_shark", display_name="Siren Shark", kind="aquatic",
-        base_hp=32, base_atk=30, base_def=16, base_spd=28, base_luck=13,
-        blurb="A pelagic blur. Hits too fast for prey to register.",
-        sprite_fallback="minnow", is_starter=False,
-    ),
-    "fortress_shark": Species(
-        id="fortress_shark", display_name="Fortress Shark", kind="aquatic",
-        base_hp=40, base_atk=20, base_def=28, base_spd=18, base_luck=12,
-        blurb="A blunt-nosed tank with a sandpaper hide. Nothing gets a grip.",
-        sprite_fallback="minnow", is_starter=False,
-    ),
-    "apex_kraken_fish": Species(
-        id="apex_kraken_fish", display_name="Apex Kraken Fish", kind="aquatic",
-        base_hp=48, base_atk=40, base_def=28, base_spd=32, base_luck=16,
-        blurb="A myth that turned out to be real. Drags ships down and then the stories.",
-        sprite_fallback="minnow", is_starter=False,
-    ),
-    "armored_leviathan": Species(
-        id="armored_leviathan", display_name="Armored Leviathan", kind="aquatic",
-        base_hp=56, base_atk=30, base_def=38, base_spd=22, base_luck=15,
-        blurb="Hull-plated whale-fish. A reef that decided to swim.",
-        sprite_fallback="minnow", is_starter=False,
-    ),
-
     # ─── wren lineage (depth 7, tier-3 owl branch + tier-7 apex branch) ────
     "barn_owl": Species(
         id="barn_owl", display_name="Barn Owl", kind="avian",
@@ -1839,36 +1692,9 @@ SPECIES: dict[str, Species] = {
         base_hp=24, base_atk=17, base_def=12, base_spd=19, base_luck=14,
         blurb="The tiger of the owl world. Takes skunks without hesitating.",
         evolutions=(
-            Evolution("ghost_owl", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("stone_owl", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="wren", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
-    "ghost_owl": Species(
-        id="ghost_owl", display_name="Ghost Owl", kind="avian",
-        base_hp=30, base_atk=26, base_def=13, base_spd=28, base_luck=16,
-        blurb="A white-winged twilight killer. Hangs in the air, then is suddenly not.",
-        sprite_fallback="wren", is_starter=False,
-    ),
-    "stone_owl": Species(
-        id="stone_owl", display_name="Stone Owl", kind="avian",
-        base_hp=38, base_atk=17, base_def=26, base_spd=14, base_luck=15,
-        blurb="A monolithic perched owl carved from river rock. Blinks once a year.",
-        sprite_fallback="wren", is_starter=False,
-    ),
-    "thunder_eagle": Species(
-        id="thunder_eagle", display_name="Thunder Eagle", kind="avian",
-        base_hp=44, base_atk=42, base_def=22, base_spd=34, base_luck=18,
-        blurb="Storm-riding apex. Claws crackle with static before the strike.",
-        sprite_fallback="wren", is_starter=False,
-    ),
-    "shadow_eagle": Species(
-        id="shadow_eagle", display_name="Shadow Eagle", kind="avian",
-        base_hp=50, base_atk=32, base_def=30, base_spd=22, base_luck=17,
-        blurb="A shade-cloaked giant. Watches from the high stones before it moves.",
-        sprite_fallback="wren", is_starter=False,
-    ),
-
     # ═════════════════════════════════════════════════════════════════════
     # Split-and-converge — batch 2: beasts (field_mouse, squirrel, hedgehog)
     # ═════════════════════════════════════════════════════════════════════
@@ -1878,18 +1704,8 @@ SPECIES: dict[str, Species] = {
         id="shrew_hunter", display_name="Shrew Hunter", kind="beast",
         base_hp=22, base_atk=11, base_def=15, base_spd=12, base_luck=10,
         blurb="A tiny insectivore with a venomous bite and a relentless appetite.",
-        evolutions=(Evolution("mole_lord", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
+        evolutions=(Evolution("mountain_mole", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
         sprite_fallback="field_mouse", is_starter=False, evolves_at=TIER_4_LEVEL,
-    ),
-    "mole_lord": Species(
-        id="mole_lord", display_name="Mole Lord", kind="beast",
-        base_hp=28, base_atk=14, base_def=20, base_spd=10, base_luck=11,
-        blurb="A subterranean ruler that never needs to see daylight.",
-        evolutions=(
-            Evolution("alpine_colossus", requirements={"int_": 62, "luck": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("glacier_rat", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
-        ),
-        sprite_fallback="field_mouse", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
     "glacier_rat": Species(
         id="glacier_rat", display_name="Glacier Rat", kind="beast",
@@ -1897,19 +1713,6 @@ SPECIES: dict[str, Species] = {
         blurb="A white-furred tundra burrower. Its bones are said to conduct cold.",
         sprite_fallback="field_mouse", is_starter=False,
     ),
-    "titan_rat_king": Species(
-        id="titan_rat_king", display_name="Titan Rat King", kind="beast",
-        base_hp=48, base_atk=32, base_def=26, base_spd=26, base_luck=18,
-        blurb="A prehistoric tyrant-rodent. Leads a horde at full sprint.",
-        sprite_fallback="field_mouse", is_starter=False,
-    ),
-    "burrow_emperor": Species(
-        id="burrow_emperor", display_name="Burrow Emperor", kind="beast",
-        base_hp=56, base_atk=22, base_def=40, base_spd=14, base_luck=16,
-        blurb="Ruler of a mile-wide underground city. Unmoved by surface happenings.",
-        sprite_fallback="field_mouse", is_starter=False,
-    ),
-
     # ─── squirrel lineage (depth 5) — shares alpine_colossus with field_mouse ─
     "red_fox_kit": Species(
         id="red_fox_kit", display_name="Red Fox Kit", kind="beast",
@@ -1923,45 +1726,18 @@ SPECIES: dict[str, Species] = {
         base_hp=24, base_atk=15, base_def=14, base_spd=17, base_luck=15,
         blurb="A moonlit hunter with a brush for a tail and an answer for every trap.",
         evolutions=(
-            Evolution("alpine_colossus", requirements={"int_": 62, "luck": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("shadow_fox", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
+            Evolution("dire_wolf", requirements={"atk": 44, "hp": 44}, stat_bonus=_TIER_4_BONUS),
+            Evolution("tundra_lynx", requirements={"hp": 28, "atk": 28}, stat_bonus=_TIER_4_BONUS),
         ),
         sprite_fallback="squirrel", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
-    "shadow_fox": Species(
-        id="shadow_fox", display_name="Shadow Fox", kind="beast",
-        base_hp=34, base_atk=20, base_def=28, base_spd=16, base_luck=16,
-        blurb="A smoke-cloaked trickster. Steps leave no sound and no mark.",
-        sprite_fallback="squirrel", is_starter=False,
-    ),
-    "cloud_squirrel": Species(
-        id="cloud_squirrel", display_name="Cloud Squirrel", kind="beast",
-        base_hp=34, base_atk=24, base_def=16, base_spd=28, base_luck=15,
-        blurb="A high-canopy glider that clears canyons in a single leap.",
-        sprite_fallback="squirrel", is_starter=False,
-    ),
-    "ironclad_squirrel": Species(
-        id="ironclad_squirrel", display_name="Ironclad Squirrel", kind="beast",
-        base_hp=40, base_atk=16, base_def=30, base_spd=14, base_luck=16,
-        blurb="Its tail is a shield, its acorns are weapons, and its stash is fortified.",
-        sprite_fallback="squirrel", is_starter=False,
-    ),
-
     # ─── alpine_colossus: SHARED apex (field_mouse + squirrel converge here) ─
-    "alpine_colossus": Species(
-        id="alpine_colossus", display_name="Alpine Colossus", kind="beast",
-        base_hp=44, base_atk=28, base_def=22, base_spd=24, base_luck=15,
-        blurb="A hulking mountain runner. The elder of any peak it calls home. "
-              "Both mouse-line and squirrel-line buddies can converge here.",
-        sprite_fallback="field_mouse", is_starter=False,
-    ),
-
     # ─── hedgehog lineage (depth 7) ───────────────────────────────────────
     "mountain_mole": Species(
         id="mountain_mole", display_name="Mountain Mole", kind="beast",
         base_hp=24, base_atk=9, base_def=18, base_spd=8, base_luck=10,
         blurb="A boulder-dwelling digger. Sharper hearing than sight, which is saying something.",
-        evolutions=(Evolution("cave_mole", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
+        evolutions=( Evolution("andrewsarchus", requirements={"atk": 44, "hp": 44}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="hedgehog", is_starter=False, evolves_at=TIER_4_LEVEL,
     ),
     "cave_mole": Species(
@@ -1969,129 +1745,24 @@ SPECIES: dict[str, Species] = {
         base_hp=30, base_atk=12, base_def=24, base_spd=9, base_luck=11,
         blurb="A blind stonework specialist. Lives in caverns no one else has seen.",
         evolutions=(
-            Evolution("iron_mole", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("obsidian_mole", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="hedgehog", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
-    "iron_mole": Species(
-        id="iron_mole", display_name="Iron Mole", kind="beast",
-        base_hp=36, base_atk=22, base_def=28, base_spd=14, base_luck=13,
-        blurb="A metal-clawed tunneler. Digs through solid rock in a straight line.",
-        sprite_fallback="hedgehog", is_starter=False,
-    ),
-    "obsidian_mole": Species(
-        id="obsidian_mole", display_name="Obsidian Mole", kind="beast",
-        base_hp=44, base_atk=14, base_def=36, base_spd=8, base_luck=14,
-        blurb="A glass-plated burrower. Coals inside, volcanic outside.",
-        sprite_fallback="hedgehog", is_starter=False,
-    ),
-    "thunder_sloth": Species(
-        id="thunder_sloth", display_name="Thunder Sloth", kind="beast",
-        base_hp=52, base_atk=46, base_def=34, base_spd=26, base_luck=18,
-        blurb="An Ice Age colossus with claws like thunderheads. Charges surprisingly fast for a sloth.",
-        sprite_fallback="hedgehog", is_starter=False,
-    ),
-    "bedrock_sloth": Species(
-        id="bedrock_sloth", display_name="Bedrock Sloth", kind="beast",
-        base_hp=60, base_atk=28, base_def=50, base_spd=10, base_luck=17,
-        blurb="A mountain-shouldered tank. Roots into the ground and doesn't move for seasons.",
-        sprite_fallback="hedgehog", is_starter=False,
-    ),
-
     # ═════════════════════════════════════════════════════════════════════
     # Split-and-converge — batch 3: insects (bee, ladybug, caterpillar)
     # Shared apex: titan_wing_beetle (ladybug + caterpillar converge)
     # ═════════════════════════════════════════════════════════════════════
 
     # ─── bee lineage (depth 5, no cross-lineage merge) ────────────────────
-    "moth_wasp": Species(
-        id="moth_wasp", display_name="Moth-Wing Wasp", kind="insect",
-        base_hp=12, base_atk=14, base_def=10, base_spd=14, base_luck=10,
-        blurb="A fuzzy-winged hybrid. Half pollinator, half assassin.",
-        evolutions=(Evolution("silk_wasp", requirements={"atk": 44}, stat_bonus=_TIER_4_BONUS),),
-        sprite_fallback="bee", is_starter=False, evolves_at=TIER_4_LEVEL,
-    ),
-    "silk_wasp": Species(
-        id="silk_wasp", display_name="Silk Wasp", kind="insect",
-        base_hp=14, base_atk=16, base_def=12, base_spd=16, base_luck=11,
-        blurb="Spins webs thin enough to catch starlight.",
-        evolutions=(
-            Evolution("mirror_wasp", requirements={"int_": 62, "luck": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("silk_queen", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
-        ),
-        sprite_fallback="bee", is_starter=False, evolves_at=TIER_5_LEVEL,
-    ),
-    "mirror_wasp": Species(
-        id="mirror_wasp", display_name="Mirror Wasp", kind="insect",
-        base_hp=18, base_atk=20, base_def=14, base_spd=22, base_luck=18,
-        blurb="Wings like polished obsidian. Every strike reflects its foe's mistake.",
-        sprite_fallback="bee", is_starter=False,
-    ),
-    "silk_queen": Species(
-        id="silk_queen", display_name="Silk Queen", kind="insect",
-        base_hp=22, base_atk=16, base_def=26, base_spd=14, base_luck=16,
-        blurb="A matriarch at the center of a glass-silk fortress.",
-        sprite_fallback="bee", is_starter=False,
-    ),
-    "venom_general": Species(
-        id="venom_general", display_name="Venom General", kind="insect",
-        base_hp=26, base_atk=34, base_def=14, base_spd=28, base_luck=12,
-        blurb="A wasp-lord whose single sting fells giants.",
-        sprite_fallback="bee", is_starter=False,
-    ),
-    "carapace_scout": Species(
-        id="carapace_scout", display_name="Carapace Scout", kind="insect",
-        base_hp=32, base_atk=22, base_def=26, base_spd=20, base_luck=12,
-        blurb="An armored recon ant-wasp. Watches, reports, then vanishes.",
-        sprite_fallback="bee", is_starter=False,
-    ),
-
     # ─── ladybug lineage (depth 7) — shares titan_wing_beetle with caterpillar ─
     "glow_bug": Species(
         id="glow_bug", display_name="Glow Bug", kind="insect",
         base_hp=22, base_atk=10, base_def=14, base_spd=8, base_luck=14,
         blurb="A beetle that carries its own lantern. Blinks in code.",
-        evolutions=(Evolution("ember_beetle", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
+        evolutions=(Evolution("hercules_beetle", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
         sprite_fallback="ladybug", is_starter=False, evolves_at=TIER_4_LEVEL,
     ),
-    "ember_beetle": Species(
-        id="ember_beetle", display_name="Ember Beetle", kind="insect",
-        base_hp=26, base_atk=13, base_def=18, base_spd=9, base_luck=15,
-        blurb="Carries live coals in its carapace. Glows through armor plates.",
-        evolutions=(
-            Evolution("titan_wing_beetle", requirements={"int_": 62, "luck": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("cinder_beetle", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
-        ),
-        sprite_fallback="ladybug", is_starter=False, evolves_at=TIER_5_LEVEL,
-    ),
-    "cinder_beetle": Species(
-        id="cinder_beetle", display_name="Cinder Beetle", kind="insect",
-        base_hp=34, base_atk=16, base_def=28, base_spd=8, base_luck=16,
-        blurb="Slag-hard plates. Cools to black between strikes.",
-        sprite_fallback="ladybug", is_starter=False,
-    ),
-    "storm_scorpion": Species(
-        id="storm_scorpion", display_name="Storm Scorpion", kind="insect",
-        base_hp=46, base_atk=40, base_def=30, base_spd=22, base_luck=18,
-        blurb="Claws like lightning rods. The sky answers when it walks.",
-        sprite_fallback="ladybug", is_starter=False,
-    ),
-    "obelisk_scorpion": Species(
-        id="obelisk_scorpion", display_name="Obelisk Scorpion", kind="insect",
-        base_hp=54, base_atk=30, base_def=42, base_spd=14, base_luck=17,
-        blurb="Carved of living stone. Older than the rivers around it.",
-        sprite_fallback="ladybug", is_starter=False,
-    ),
-
     # ─── titan_wing_beetle: SHARED apex (ladybug + caterpillar converge here) ─
-    "titan_wing_beetle": Species(
-        id="titan_wing_beetle", display_name="Titan Wing Beetle", kind="insect",
-        base_hp=40, base_atk=22, base_def=20, base_spd=26, base_luck=20,
-        blurb="A hand-sized iridescent flyer. Shared apex for the ladybug and caterpillar lines.",
-        sprite_fallback="ladybug", is_starter=False,
-    ),
-
     # ─── caterpillar lineage (depth 7) — shares titan_wing_beetle with ladybug ─
     "stick_bug": Species(
         id="stick_bug", display_name="Stick Bug", kind="insect",
@@ -2105,30 +1776,9 @@ SPECIES: dict[str, Species] = {
         base_hp=28, base_atk=11, base_def=20, base_spd=11, base_luck=13,
         blurb="A meter-long camouflaged insect. Pretends to be a tree and mostly succeeds.",
         evolutions=(
-            Evolution("titan_wing_beetle", requirements={"int_": 62, "luck": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("moss_giant", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="caterpillar", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
-    "moss_giant": Species(
-        id="moss_giant", display_name="Moss Giant", kind="insect",
-        base_hp=36, base_atk=12, base_def=28, base_spd=9, base_luck=15,
-        blurb="A walking moss-covered boulder. Lichen grows faster than it moves, and that's saying something.",
-        sprite_fallback="caterpillar", is_starter=False,
-    ),
-    "thunder_dragonfly": Species(
-        id="thunder_dragonfly", display_name="Thunder Dragonfly", kind="insect",
-        base_hp=44, base_atk=34, base_def=22, base_spd=40, base_luck=19,
-        blurb="A storm-born insect apex. Wings carve the sky into noise.",
-        sprite_fallback="caterpillar", is_starter=False,
-    ),
-    "fossil_dragonfly": Species(
-        id="fossil_dragonfly", display_name="Fossil Dragonfly", kind="insect",
-        base_hp=52, base_atk=22, base_def=36, base_spd=22, base_luck=18,
-        blurb="Petrified wings that somehow still beat. Older than most mountains.",
-        sprite_fallback="caterpillar", is_starter=False,
-    ),
-
     # ═════════════════════════════════════════════════════════════════════
     # Split-and-converge — batch 4: amphibians (froglet, newt, axolotl)
     # Shared apex: elder_salamander (newt + axolotl converge)
@@ -2139,7 +1789,7 @@ SPECIES: dict[str, Species] = {
         id="clawed_frog", display_name="Clawed Frog", kind="amphibian",
         base_hp=22, base_atk=10, base_def=14, base_spd=12, base_luck=11,
         blurb="Scythe-toed amphibian that hunts by pinning its prey.",
-        evolutions=(Evolution("amazon_toad", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
+        evolutions=(Evolution("amazon_toad", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS), Evolution("sea_eel", requirements={"spd": 28, "luck": 28}, stat_bonus=_TIER_3_BONUS),),
         sprite_fallback="froglet", is_starter=False, evolves_at=TIER_4_LEVEL,
     ),
     "amazon_toad": Species(
@@ -2147,36 +1797,9 @@ SPECIES: dict[str, Species] = {
         base_hp=26, base_atk=12, base_def=17, base_spd=13, base_luck=12,
         blurb="Jungle-canopy ruler with a pocket of tadpoles on its back.",
         evolutions=(
-            Evolution("jungle_king", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("vine_terror", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="froglet", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
-    "jungle_king": Species(
-        id="jungle_king", display_name="Jungle King Frog", kind="amphibian",
-        base_hp=32, base_atk=22, base_def=16, base_spd=24, base_luck=14,
-        blurb="A crowned canopy ambusher. One leap crosses a clearing.",
-        sprite_fallback="froglet", is_starter=False,
-    ),
-    "vine_terror": Species(
-        id="vine_terror", display_name="Vine Terror", kind="amphibian",
-        base_hp=38, base_atk=14, base_def=28, base_spd=12, base_luck=15,
-        blurb="A bramble-armored toad. Moves with the forest floor.",
-        sprite_fallback="froglet", is_starter=False,
-    ),
-    "sky_toad": Species(
-        id="sky_toad", display_name="Sky Toad", kind="amphibian",
-        base_hp=34, base_atk=28, base_def=18, base_spd=26, base_luck=16,
-        blurb="A gliding toad with cloud-membranes between its toes.",
-        sprite_fallback="froglet", is_starter=False,
-    ),
-    "stone_toad": Species(
-        id="stone_toad", display_name="Stone Toad", kind="amphibian",
-        base_hp=42, base_atk=20, base_def=32, base_spd=10, base_luck=15,
-        blurb="A weathered boulder toad. Sits still for a thousand years between meals.",
-        sprite_fallback="froglet", is_starter=False,
-    ),
-
     # ─── newt lineage (depth 5) — shares elder_salamander with axolotl ────
     "cave_salamander": Species(
         id="cave_salamander", display_name="Cave Salamander", kind="amphibian",
@@ -2190,75 +1813,18 @@ SPECIES: dict[str, Species] = {
         base_hp=26, base_atk=10, base_def=20, base_spd=10, base_luck=14,
         blurb="A pearl-white hunter with lightless eyes. Feels the ripple of footsteps in still water.",
         evolutions=(
-            Evolution("elder_salamander", requirements={"int_": 62, "luck": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("dream_salamander", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="newt", is_starter=False, evolves_at=TIER_5_LEVEL,
-    ),
-    "dream_salamander": Species(
-        id="dream_salamander", display_name="Dream Salamander", kind="amphibian",
-        base_hp=34, base_atk=12, base_def=26, base_spd=11, base_luck=16,
-        blurb="A drowsing oracle. Its skin shifts color with forgotten memories.",
-        sprite_fallback="newt", is_starter=False,
-    ),
-    "river_king_salamander": Species(
-        id="river_king_salamander", display_name="River King Salamander", kind="amphibian",
-        base_hp=40, base_atk=26, base_def=24, base_spd=22, base_luck=16,
-        blurb="A crowned river-bottom apex. Its back is a territorial boundary.",
-        sprite_fallback="newt", is_starter=False,
     ),
     "mountain_salamander": Species(
         id="mountain_salamander", display_name="Mountain Salamander", kind="amphibian",
         base_hp=48, base_atk=18, base_def=36, base_spd=10, base_luck=15,
         blurb="A granite-skinned giant. Lives in cold mountain springs for centuries.",
+        evolutions=(Evolution("sclerocephalus", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="newt", is_starter=False,
     ),
 
     # ─── elder_salamander: SHARED apex (newt + axolotl converge here) ────
-    "elder_salamander": Species(
-        id="elder_salamander", display_name="Elder Salamander", kind="amphibian",
-        base_hp=44, base_atk=20, base_def=26, base_spd=16, base_luck=22,
-        blurb="A pale, ancient amphibian said to whisper advice to rivers. Shared apex for newt and axolotl lines.",
-        sprite_fallback="newt", is_starter=False,
-    ),
-
-    # ─── axolotl lineage (depth 5) — shares elder_salamander with newt ────
-    "pond_wyrm": Species(
-        id="pond_wyrm", display_name="Pond Wyrm", kind="amphibian",
-        base_hp=24, base_atk=10, base_def=15, base_spd=11, base_luck=13,
-        blurb="A finned pond-bottom prowler. Looks harmless until the last second.",
-        evolutions=(Evolution("lake_wyrm", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
-        sprite_fallback="axolotl", is_starter=False, evolves_at=TIER_4_LEVEL,
-    ),
-    "lake_wyrm": Species(
-        id="lake_wyrm", display_name="Lake Wyrm", kind="amphibian",
-        base_hp=28, base_atk=13, base_def=19, base_spd=12, base_luck=14,
-        blurb="A six-foot lake predator with gills like fans and gills like knives.",
-        evolutions=(
-            Evolution("elder_salamander", requirements={"int_": 62, "luck": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("crystal_wyrm", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
-        ),
-        sprite_fallback="axolotl", is_starter=False, evolves_at=TIER_5_LEVEL,
-    ),
-    "crystal_wyrm": Species(
-        id="crystal_wyrm", display_name="Crystal Wyrm", kind="amphibian",
-        base_hp=36, base_atk=14, base_def=28, base_spd=12, base_luck=17,
-        blurb="A wyrm with a body like polished quartz. Each scale catches a different color.",
-        sprite_fallback="axolotl", is_starter=False,
-    ),
-    "thunder_axolotl": Species(
-        id="thunder_axolotl", display_name="Thunder Axolotl", kind="amphibian",
-        base_hp=42, base_atk=28, base_def=22, base_spd=24, base_luck=17,
-        blurb="Gills spark with stored lightning. A storm's apex pond-dweller.",
-        sprite_fallback="axolotl", is_starter=False,
-    ),
-    "stone_axolotl": Species(
-        id="stone_axolotl", display_name="Stone Axolotl", kind="amphibian",
-        base_hp=50, base_atk=20, base_def=36, base_spd=12, base_luck=16,
-        blurb="A petrified axolotl so old its smile became geology.",
-        sprite_fallback="axolotl", is_starter=False,
-    ),
-
     # ═════════════════════════════════════════════════════════════════════
     # Split-and-converge — batch 5: aquatics (guppy, snail, shrimp)
     # Shared apex: deep_crustacean (snail + shrimp converge)
@@ -2277,36 +1843,17 @@ SPECIES: dict[str, Species] = {
         base_hp=24, base_atk=12, base_def=20, base_spd=9, base_luck=13,
         blurb="Longer spines, shorter temper. A reef's floating mine.",
         evolutions=(
-            Evolution("thunder_puffer", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS, grants_skill="battle_cry"),
             Evolution("iron_puffer", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS, grants_skill="iron_skin"),
         ),
         sprite_fallback="guppy", is_starter=False, evolves_at=TIER_5_LEVEL,
-    ),
-    "thunder_puffer": Species(
-        id="thunder_puffer", display_name="Thunder Puffer", kind="aquatic",
-        base_hp=32, base_atk=24, base_def=20, base_spd=22, base_luck=15,
-        blurb="A storm-charged blowfish. Its spines crackle before they strike.",
-        sprite_fallback="guppy", is_starter=False,
     ),
     "iron_puffer": Species(
         id="iron_puffer", display_name="Iron Puffer", kind="aquatic",
         base_hp=40, base_atk=14, base_def=32, base_spd=8, base_luck=14,
         blurb="Inflates into a sphere of living iron. A reef's immovable gate.",
+        inherent_skills=("iron_skin",),  # granted on evolution from pufferfish
         sprite_fallback="guppy", is_starter=False,
     ),
-    "storm_megalodon": Species(
-        id="storm_megalodon", display_name="Storm Megalodon", kind="aquatic",
-        base_hp=60, base_atk=46, base_def=28, base_spd=38, base_luck=22,
-        blurb="A 60-foot shark that rides hurricanes like currents.",
-        sprite_fallback="guppy", is_starter=False,
-    ),
-    "basalt_megalodon": Species(
-        id="basalt_megalodon", display_name="Basalt Megalodon", kind="aquatic",
-        base_hp=72, base_atk=34, base_def=48, base_spd=22, base_luck=20,
-        blurb="A trench-depth shark with hide like cooled lava. Nothing hurts it.",
-        sprite_fallback="guppy", is_starter=False,
-    ),
-
     # ─── snail lineage (depth 7) — shares deep_crustacean with shrimp ─────
     "hermit_crab": Species(
         id="hermit_crab", display_name="Hermit Crab", kind="aquatic",
@@ -2320,129 +1867,38 @@ SPECIES: dict[str, Species] = {
         base_hp=30, base_atk=14, base_def=24, base_spd=8, base_luck=13,
         blurb="A land-walking crab that cracks coconuts with one pinch.",
         evolutions=(
-            Evolution("deep_crustacean", requirements={"int_": 62, "luck": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("hermit_king", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="snail", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
-    "hermit_king": Species(
-        id="hermit_king", display_name="Hermit King", kind="aquatic",
-        base_hp=44, base_atk=18, base_def=36, base_spd=8, base_luck=15,
-        blurb="A throned crab wearing a shell as large as a boulder.",
-        sprite_fallback="snail", is_starter=False,
-    ),
-    "thunder_squid": Species(
-        id="thunder_squid", display_name="Thunder Squid", kind="aquatic",
-        base_hp=52, base_atk=36, base_def=26, base_spd=38, base_luck=20,
-        blurb="Tentacles trailing a static wake. Fires bolts through the black water.",
-        sprite_fallback="snail", is_starter=False,
-    ),
-    "abyss_squid": Species(
-        id="abyss_squid", display_name="Abyss Squid", kind="aquatic",
-        base_hp=68, base_atk=26, base_def=44, base_spd=22, base_luck=20,
-        blurb="A trench-dwelling colossus. Ink clouds swallow light whole.",
-        sprite_fallback="snail", is_starter=False,
-    ),
-
     # ─── deep_crustacean: SHARED apex (snail + shrimp converge here) ──────
-    "deep_crustacean": Species(
-        id="deep_crustacean", display_name="Deep Crustacean", kind="aquatic",
-        base_hp=46, base_atk=22, base_def=28, base_spd=14, base_luck=24,
-        blurb="An abyssal scavenger-sage. Shell bioluminescent with forgotten constellations. Shared apex for snail and shrimp lines.",
-        sprite_fallback="snail", is_starter=False,
-    ),
-
     # ─── shrimp lineage (depth 7) — shares deep_crustacean with snail ─────
     "pistol_shrimp": Species(
         id="pistol_shrimp", display_name="Pistol Shrimp", kind="aquatic",
         base_hp=22, base_atk=13, base_def=17, base_spd=13, base_luck=12,
         blurb="Snaps its claw to shoot a cavitation bullet. Louder than a gunshot.",
-        evolutions=(Evolution("mantis_titan", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
+        evolutions=(Evolution("mantis_shrimp", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
         sprite_fallback="shrimp", is_starter=False, evolves_at=TIER_4_LEVEL,
     ),
-    "mantis_titan": Species(
-        id="mantis_titan", display_name="Mantis Titan", kind="aquatic",
-        base_hp=28, base_atk=17, base_def=22, base_spd=15, base_luck=13,
-        blurb="A meter-long mantis shrimp. Sees colors beyond light itself.",
-        evolutions=(
-            Evolution("deep_crustacean", requirements={"int_": 62, "luck": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("sonar_titan", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
-        ),
-        sprite_fallback="shrimp", is_starter=False, evolves_at=TIER_5_LEVEL,
-    ),
-    "sonar_titan": Species(
-        id="sonar_titan", display_name="Sonar Titan", kind="aquatic",
-        base_hp=42, base_atk=18, base_def=34, base_spd=14, base_luck=16,
-        blurb="A reef-sized crustacean that navigates by bouncing thunderclaps.",
-        sprite_fallback="shrimp", is_starter=False,
-    ),
-    "storm_euryp": Species(
-        id="storm_euryp", display_name="Storm Eurypterid", kind="aquatic",
-        base_hp=54, base_atk=38, base_def=26, base_spd=36, base_luck=19,
-        blurb="A prehistoric sea scorpion reborn in the tempest. Tail lightning in a spiral.",
-        sprite_fallback="shrimp", is_starter=False,
-    ),
-    "cavern_euryp": Species(
-        id="cavern_euryp", display_name="Cavern Eurypterid", kind="aquatic",
-        base_hp=66, base_atk=26, base_def=46, base_spd=18, base_luck=18,
-        blurb="A cave-system sea scorpion the size of a horse. Walls don't stop it.",
-        sprite_fallback="shrimp", is_starter=False,
-    ),
-
     # ═════════════════════════════════════════════════════════════════════
     # Split-and-converge — batch 6: reptiles (baby_gecko, anole, skink)
     # Shared apex: monitor_titan (anole + skink converge)
     # ═════════════════════════════════════════════════════════════════════
 
     # ─── baby_gecko lineage (depth 5, no cross-lineage merge) ─────────────
-    "skink_cousin": Species(
-        id="skink_cousin", display_name="Dwarf Skink", kind="reptile",
-        base_hp=20, base_atk=9, base_def=15, base_spd=12, base_luck=12,
-        blurb="A small, smooth-scaled cousin to the geckos. Burrows fast.",
-        evolutions=(Evolution("glass_lizard", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
-        sprite_fallback="baby_gecko", is_starter=False, evolves_at=TIER_4_LEVEL,
-    ),
     "glass_lizard": Species(
         id="glass_lizard", display_name="Glass Lizard", kind="reptile",
         base_hp=24, base_atk=11, base_def=19, base_spd=13, base_luck=13,
         blurb="A legless lizard that drops its tail like shattering glass.",
         evolutions=(
-            Evolution("thunder_lizard", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("crystal_gecko", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="baby_gecko", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
-    "thunder_lizard": Species(
-        id="thunder_lizard", display_name="Thunder Lizard", kind="reptile",
-        base_hp=32, base_atk=24, base_def=18, base_spd=26, base_luck=15,
-        blurb="A swift reptile crackling with storm static. Named by ancient herders.",
-        sprite_fallback="baby_gecko", is_starter=False,
-    ),
-    "crystal_gecko": Species(
-        id="crystal_gecko", display_name="Crystal Gecko", kind="reptile",
-        base_hp=40, base_atk=14, base_def=32, base_spd=10, base_luck=16,
-        blurb="Translucent scales harder than quartz. A living cathedral window.",
-        sprite_fallback="baby_gecko", is_starter=False,
-    ),
-    "canopy_gecko_king": Species(
-        id="canopy_gecko_king", display_name="Canopy Gecko King", kind="reptile",
-        base_hp=36, base_atk=28, base_def=20, base_spd=30, base_luck=18,
-        blurb="A crowned giant gecko that rules a single tree absolutely.",
-        sprite_fallback="baby_gecko", is_starter=False,
-    ),
-    "stone_gecko_elder": Species(
-        id="stone_gecko_elder", display_name="Stone Gecko Elder", kind="reptile",
-        base_hp=46, base_atk=18, base_def=38, base_spd=14, base_luck=17,
-        blurb="A basalt-skinned patriarch. Its toe-pads grip cliffs and centuries alike.",
-        sprite_fallback="baby_gecko", is_starter=False,
-    ),
-
     # ─── anole lineage (depth 5) — shares monitor_titan with skink ────────
     "small_varanid": Species(
         id="small_varanid", display_name="Small Varanid", kind="reptile",
         base_hp=22, base_atk=10, base_def=16, base_spd=13, base_luck=12,
         blurb="A palm-sized monitor lizard. Hunts like its giant cousins in miniature.",
-        evolutions=(Evolution("tree_monitor", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
+        evolutions=(Evolution("tree_monitor", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS), Evolution("glass_lizard", requirements={"spd": 28, "luck": 28}, stat_bonus=_TIER_3_BONUS),),
         sprite_fallback="anole", is_starter=False, evolves_at=TIER_4_LEVEL,
     ),
     "tree_monitor": Species(
@@ -2450,38 +1906,10 @@ SPECIES: dict[str, Species] = {
         base_hp=26, base_atk=13, base_def=20, base_spd=15, base_luck=13,
         blurb="An arboreal monitor with whip-tail and emerald scales.",
         evolutions=(
-            Evolution("monitor_titan", requirements={"int_": 62, "luck": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("canopy_stalker", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="anole", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
-    "canopy_stalker": Species(
-        id="canopy_stalker", display_name="Canopy Stalker", kind="reptile",
-        base_hp=40, base_atk=14, base_def=32, base_spd=12, base_luck=16,
-        blurb="A silent, plated monitor that hunts by patience alone.",
-        sprite_fallback="anole", is_starter=False,
-    ),
-    "mirage_chameleon": Species(
-        id="mirage_chameleon", display_name="Mirage Chameleon", kind="reptile",
-        base_hp=36, base_atk=28, base_def=20, base_spd=30, base_luck=18,
-        blurb="Bends light so perfectly it appears in two places at once.",
-        sprite_fallback="anole", is_starter=False,
-    ),
-    "fortress_chameleon": Species(
-        id="fortress_chameleon", display_name="Fortress Chameleon", kind="reptile",
-        base_hp=48, base_atk=18, base_def=38, base_spd=14, base_luck=16,
-        blurb="A bunker of layered scales. Moves only when it wants to.",
-        sprite_fallback="anole", is_starter=False,
-    ),
-
     # ─── monitor_titan: SHARED apex (anole + skink converge here) ─────────
-    "monitor_titan": Species(
-        id="monitor_titan", display_name="Monitor Titan", kind="reptile",
-        base_hp=44, base_atk=22, base_def=26, base_spd=18, base_luck=24,
-        blurb="A house-sized varanid that reads the wind. Shared apex for anole and skink lines.",
-        sprite_fallback="anole", is_starter=False,
-    ),
-
     # ─── skink lineage (depth 7) — shares monitor_titan with anole ────────
     "fat_tail_lizard": Species(
         id="fat_tail_lizard", display_name="Fat-Tail Lizard", kind="reptile",
@@ -2495,30 +1923,11 @@ SPECIES: dict[str, Species] = {
         base_hp=30, base_atk=15, base_def=22, base_spd=12, base_luck=12,
         blurb="Australia's largest monitor. Sprints into dens to drag out prey.",
         evolutions=(
-            Evolution("monitor_titan", requirements={"int_": 62, "luck": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("sand_prowler", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
+            Evolution("anaconda", requirements={"atk": 44, "hp": 44}, stat_bonus=_TIER_4_BONUS),
+            Evolution("megalania", requirements={"def_": 44, "hp": 44}, stat_bonus=_TIER_6_BONUS),
         ),
         sprite_fallback="skink", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
-    "sand_prowler": Species(
-        id="sand_prowler", display_name="Sand Prowler", kind="reptile",
-        base_hp=44, base_atk=16, base_def=34, base_spd=14, base_luck=14,
-        blurb="A dune-colored monitor that surfaces only to eat.",
-        sprite_fallback="skink", is_starter=False,
-    ),
-    "thunder_mosasaur": Species(
-        id="thunder_mosasaur", display_name="Thunder Mosasaur", kind="reptile",
-        base_hp=58, base_atk=44, base_def=26, base_spd=40, base_luck=22,
-        blurb="A stormbound marine reptile. Breaches like a falling mountain.",
-        sprite_fallback="skink", is_starter=False,
-    ),
-    "bedrock_pliosaur": Species(
-        id="bedrock_pliosaur", display_name="Bedrock Pliosaur", kind="reptile",
-        base_hp=72, base_atk=30, base_def=48, base_spd=18, base_luck=20,
-        blurb="A trench-dwelling pliosaur with hide like tectonic plate.",
-        sprite_fallback="skink", is_starter=False,
-    ),
-
     # ═════════════════════════════════════════════════════════════════════
     # Split-and-converge — batch 7: avians (sparrow, chick, duckling)
     # Shared apex: ground_titan_bird (sparrow + chick converge)
@@ -2529,18 +1938,8 @@ SPECIES: dict[str, Species] = {
         id="pigeon", display_name="Pigeon", kind="avian",
         base_hp=20, base_atk=8, base_def=14, base_spd=12, base_luck=12,
         blurb="An underappreciated navigator. Remembers a roof from a thousand miles.",
-        evolutions=(Evolution("rock_dove_king", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
+        evolutions=(Evolution("pelagornis", requirements={"def_": 44}, stat_bonus=_TIER_4_BONUS),),
         sprite_fallback="sparrow", is_starter=False, evolves_at=TIER_4_LEVEL,
-    ),
-    "rock_dove_king": Species(
-        id="rock_dove_king", display_name="Rock Dove King", kind="avian",
-        base_hp=24, base_atk=11, base_def=18, base_spd=13, base_luck=13,
-        blurb="A crested dove that rules the cliffside rookeries.",
-        evolutions=(
-            Evolution("ground_titan_bird", requirements={"int_": 62, "luck": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("sky_dove", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
-        ),
-        sprite_fallback="sparrow", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
     "sky_dove": Species(
         id="sky_dove", display_name="Sky Dove", kind="avian",
@@ -2548,27 +1947,7 @@ SPECIES: dict[str, Species] = {
         blurb="A storm-cloud dove with silver plumage. Navigates by starlight.",
         sprite_fallback="sparrow", is_starter=False,
     ),
-    "thunder_runner": Species(
-        id="thunder_runner", display_name="Thunder Runner", kind="avian",
-        base_hp=54, base_atk=44, base_def=24, base_spd=46, base_luck=20,
-        blurb="A lightning-footed terror bird. Crosses a plain before you can turn.",
-        sprite_fallback="sparrow", is_starter=False,
-    ),
-    "bedrock_runner": Species(
-        id="bedrock_runner", display_name="Bedrock Runner", kind="avian",
-        base_hp=68, base_atk=30, base_def=46, base_spd=22, base_luck=19,
-        blurb="A slate-plated terror bird. Each stomp is an earthquake.",
-        sprite_fallback="sparrow", is_starter=False,
-    ),
-
     # ─── ground_titan_bird: SHARED apex (sparrow + chick converge here) ──
-    "ground_titan_bird": Species(
-        id="ground_titan_bird", display_name="Ground Titan Bird", kind="avian",
-        base_hp=46, base_atk=22, base_def=28, base_spd=20, base_luck=26,
-        blurb="A flightless colossus with wisdom in its stride. Shared apex for sparrow and chick lines.",
-        sprite_fallback="sparrow", is_starter=False,
-    ),
-
     # ─── chick lineage (depth 7) — shares ground_titan_bird with sparrow ──
     "junglefowl": Species(
         id="junglefowl", display_name="Junglefowl", kind="avian",
@@ -2582,30 +1961,9 @@ SPECIES: dict[str, Species] = {
         base_hp=26, base_atk=12, base_def=19, base_spd=14, base_luck=14,
         blurb="A crowned forest pheasant with an iridescent tail.",
         evolutions=(
-            Evolution("ground_titan_bird", requirements={"int_": 62, "luck": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("prism_pheasant", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
         ),
         sprite_fallback="chick", is_starter=False, evolves_at=TIER_5_LEVEL,
     ),
-    "prism_pheasant": Species(
-        id="prism_pheasant", display_name="Prism Pheasant", kind="avian",
-        base_hp=38, base_atk=14, base_def=30, base_spd=13, base_luck=16,
-        blurb="Feathers refract light into moving rainbows. A living stained-glass bird.",
-        sprite_fallback="chick", is_starter=False,
-    ),
-    "thunder_moa": Species(
-        id="thunder_moa", display_name="Thunder Moa", kind="avian",
-        base_hp=58, base_atk=40, base_def=26, base_spd=38, base_luck=20,
-        blurb="A stormbound moa with lightning-charged plumage. Its call is a thunderclap.",
-        sprite_fallback="chick", is_starter=False,
-    ),
-    "basalt_moa": Species(
-        id="basalt_moa", display_name="Basalt Moa", kind="avian",
-        base_hp=72, base_atk=28, base_def=50, base_spd=18, base_luck=18,
-        blurb="A basalt-plumed flightless giant. Walks like an obsidian pillar.",
-        sprite_fallback="chick", is_starter=False,
-    ),
-
     # ─── duckling lineage (depth 7, no cross-lineage merge) ───────────────
     "grebe_chick": Species(
         id="grebe_chick", display_name="Grebe Chick", kind="avian",
@@ -2618,35 +1976,531 @@ SPECIES: dict[str, Species] = {
         id="diving_grebe", display_name="Diving Grebe", kind="avian",
         base_hp=24, base_atk=11, base_def=18, base_spd=14, base_luck=14,
         blurb="A sleek submarine-bird that vanishes mid-ripple.",
-        evolutions=(
-            Evolution("deep_diver", requirements={"atk": 62, "spd": 62}, stat_bonus=_TIER_5_BONUS),
-            Evolution("stone_diver", requirements={"def_": 62, "res": 62}, stat_bonus=_TIER_5_BONUS),
-        ),
-        sprite_fallback="duckling", is_starter=False, evolves_at=TIER_5_LEVEL,
-    ),
-    "deep_diver": Species(
-        id="deep_diver", display_name="Deep Diver", kind="avian",
-        base_hp=34, base_atk=26, base_def=20, base_spd=28, base_luck=16,
-        blurb="A cold-lake specialist that hunts fish a hundred feet down.",
         sprite_fallback="duckling", is_starter=False,
     ),
-    "stone_diver": Species(
-        id="stone_diver", display_name="Stone Diver", kind="avian",
-        base_hp=42, base_atk=14, base_def=34, base_spd=12, base_luck=16,
-        blurb="A dense-boned diver bird. Sinks by choice, surfaces by will.",
+
+    # ─── Phase 3 additions: real apex species across kinds ─────────────────
+    # beasts (extinct megafauna + apex predators)
+    "smilodon": Species(
+        id="smilodon", display_name="Smilodon", kind="beast",
+        base_hp=44, base_atk=34, base_def=22, base_spd=20, base_luck=14,
+        blurb="A saber-toothed cat. The dagger fangs do not whistle when they swing.",
+        evolutions=(Evolution("thylacosmilus", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="hare", is_starter=False,
+    ),
+    "dire_wolf": Species(
+        id="dire_wolf", display_name="Dire Wolf", kind="beast",
+        base_hp=42, base_atk=30, base_def=20, base_spd=24, base_luck=15,
+        blurb="A pack-hunting ice age canid. Heavier and meaner than its modern cousins.",
+        evolutions=(Evolution("cave_lion", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="hare", is_starter=False,
+    ),
+    "paraceratherium": Species(
+        id="paraceratherium", display_name="Paraceratherium", kind="beast",
+        base_hp=68, base_atk=24, base_def=42, base_spd=10, base_luck=12,
+        blurb="The largest land mammal that ever lived. A hornless rhino the size of a house.",
+        sprite_fallback="hare", is_starter=False,
+    ),
+    "andrewsarchus": Species(
+        id="andrewsarchus", display_name="Andrewsarchus", kind="beast",
+        base_hp=50, base_atk=36, base_def=24, base_spd=18, base_luck=14,
+        blurb="A bone-crushing carnivorous mammal from the Eocene. Skull longer than a wolf.",
+        sprite_fallback="hare", is_starter=False,
+    ),
+    "woolly_mammoth": Species(
+        id="woolly_mammoth", display_name="Woolly Mammoth", kind="beast",
+        base_hp=72, base_atk=28, base_def=44, base_spd=12, base_luck=13,
+        blurb="A shaggy ice age titan. Tusks the length of a fishing pole.",
+        sprite_fallback="hare", is_starter=False,
+    ),
+
+    # aquatic (extinct + extant marine apex)
+    "basilosaurus": Species(
+        id="basilosaurus", display_name="Basilosaurus", kind="aquatic",
+        base_hp=58, base_atk=32, base_def=24, base_spd=22, base_luck=14,
+        blurb="An eel-shaped early whale. Sixty feet of toothed coil through warm Eocene seas.",
+        sprite_fallback="guppy", is_starter=False,
+    ),
+    "livyatan": Species(
+        id="livyatan", display_name="Livyatan", kind="aquatic",
+        base_hp=60, base_atk=38, base_def=22, base_spd=20, base_luck=15,
+        blurb="A macropredator sperm whale, extinct. Hunted other whales for breakfast.",
+        sprite_fallback="guppy", is_starter=False,
+    ),
+    "cameroceras": Species(
+        id="cameroceras", display_name="Cameroceras", kind="aquatic",
+        base_hp=46, base_atk=24, base_def=32, base_spd=14, base_luck=16,
+        blurb="A giant orthocone. A thirty-foot ice cream cone with tentacles and a temper.",
+        sprite_fallback="guppy", is_starter=False,
+    ),
+    "whale_shark": Species(
+        id="whale_shark", display_name="Whale Shark", kind="aquatic",
+        base_hp=64, base_atk=18, base_def=36, base_spd=18, base_luck=15,
+        blurb="The largest extant fish. A polka-dotted suction-feeder you can swim alongside.",
+        sprite_fallback="guppy", is_starter=False,
+    ),
+    "frilled_shark": Species(
+        id="frilled_shark", display_name="Frilled Shark", kind="aquatic",
+        base_hp=38, base_atk=24, base_def=20, base_spd=22, base_luck=14,
+        blurb="A living fossil shark with three hundred backward-curving teeth.",
+        sprite_fallback="guppy", is_starter=False,
+    ),
+
+    # insects / arachnids
+    "praying_mantis": Species(
+        id="praying_mantis", display_name="Praying Mantis", kind="insect",
+        base_hp=22, base_atk=22, base_def=10, base_spd=20, base_luck=14,
+        blurb="A patient ambush hunter. Strikes faster than the eye can register.",
+        sprite_fallback="ant", is_starter=False,
+    ),
+    "goliath_birdeater": Species(
+        id="goliath_birdeater", display_name="Goliath Birdeater", kind="insect",
+        base_hp=34, base_atk=22, base_def=18, base_spd=14, base_luck=13,
+        blurb="The world's largest spider. A foot across with leg-hairs that itch on contact.",
+        evolutions=(Evolution("brazilian_wandering_spider", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="ant", is_starter=False,
+    ),
+    "vinegaroon": Species(
+        id="vinegaroon", display_name="Vinegaroon", kind="insect",
+        base_hp=24, base_atk=14, base_def=20, base_spd=12, base_luck=15,
+        blurb="A whip scorpion that sprays acetic acid when alarmed. Smells like a salad.",
+        sprite_fallback="ant", is_starter=False,
+    ),
+
+    # avian (extant raptors + flightless oddballs)
+    "secretary_bird": Species(
+        id="secretary_bird", display_name="Secretary Bird", kind="avian",
+        base_hp=36, base_atk=26, base_def=18, base_spd=24, base_luck=15,
+        blurb="A long-legged ground raptor. Stomps snakes flat with surgical kicks.",
+        sprite_fallback="sparrow", is_starter=False,
+    ),
+    "philippine_eagle": Species(
+        id="philippine_eagle", display_name="Philippine Eagle", kind="avian",
+        base_hp=46, base_atk=34, base_def=22, base_spd=28, base_luck=16,
+        blurb="A monkey-eating crested eagle. One of the largest extant raptors.",
+        evolutions=(Evolution("argentavis_apex", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="sparrow", is_starter=False,
+    ),
+    "kakapo": Species(
+        id="kakapo", display_name="Kakapo", kind="avian",
+        base_hp=28, base_atk=10, base_def=22, base_spd=8, base_luck=20,
+        blurb="A flightless nocturnal parrot from New Zealand. Heavy, fluffy, and accidentally charming.",
+        sprite_fallback="sparrow", is_starter=False,
+    ),
+    "bald_eagle": Species(
+        id="bald_eagle", display_name="Bald Eagle", kind="avian",
+        base_hp=38, base_atk=28, base_def=18, base_spd=26, base_luck=15,
+        blurb="A white-headed fish hawk with a six-foot wingspan and an attitude.",
+        sprite_fallback="sparrow", is_starter=False,
+    ),
+
+    # reptiles
+    "saltwater_crocodile": Species(
+        id="saltwater_crocodile", display_name="Saltwater Crocodile", kind="reptile",
+        base_hp=64, base_atk=34, base_def=32, base_spd=14, base_luck=14,
+        blurb="The largest extant reptile. Bites with the strongest jaws ever measured.",
+        sprite_fallback="baby_gecko", is_starter=False,
+    ),
+    "gharial": Species(
+        id="gharial", display_name="Gharial", kind="reptile",
+        base_hp=42, base_atk=24, base_def=22, base_spd=20, base_luck=14,
+        blurb="A slim-snouted river crocodilian. Strikes sideways through water like a needle.",
+        sprite_fallback="baby_gecko", is_starter=False,
+    ),
+    "anaconda": Species(
+        id="anaconda", display_name="Green Anaconda", kind="reptile",
+        base_hp=58, base_atk=28, base_def=26, base_spd=14, base_luck=15,
+        blurb="The world's heaviest snake. Coils once and the conversation is over.",
+        sprite_fallback="baby_gecko", is_starter=False,
+    ),
+    "gila_monster": Species(
+        id="gila_monster", display_name="Gila Monster", kind="reptile",
+        base_hp=24, base_atk=14, base_def=18, base_spd=8, base_luck=14,
+        blurb="A beaded venomous lizard from the desert. Slow but its bite holds on.",
+        sprite_fallback="baby_gecko", is_starter=False,
+    ),
+
+    # amphibians
+    "pacman_frog": Species(
+        id="pacman_frog", display_name="Pacman Frog", kind="amphibian",
+        base_hp=28, base_atk=18, base_def=14, base_spd=8, base_luck=14,
+        blurb="A horned ambush frog the size of a softball. Will try to swallow your finger.",
+        sprite_fallback="froglet", is_starter=False,
+    ),
+    "amphiuma": Species(
+        id="amphiuma", display_name="Amphiuma", kind="amphibian",
+        base_hp=26, base_atk=12, base_def=18, base_spd=10, base_luck=13,
+        blurb="A two-foot eel-shaped salamander with vestigial limbs. Slow, then suddenly not.",
+        sprite_fallback="newt", is_starter=False,
+    ),
+    "purple_frog": Species(
+        id="purple_frog", display_name="Purple Frog", kind="amphibian",
+        base_hp=32, base_atk=14, base_def=22, base_spd=10, base_luck=15,
+        blurb="A pig-snouted burrowing frog from India. Spends most of its life underground.",
+        sprite_fallback="froglet", is_starter=False,
+    ),
+    # ─── Phase 4 chain extensions: tier 6-9 real species ──────────────
+    "rhinoceros_iguana": Species(
+        id="rhinoceros_iguana", display_name="Rhinoceros Iguana", kind="reptile",
+        base_hp=32, base_atk=16, base_def=26, base_spd=12, base_luck=14,
+        blurb="A bull-like Caribbean lizard with three small horns and a slow temper.",
+        evolutions=(Evolution("caiman_lizard", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="anole", is_starter=False,
+    ),
+    "caiman_lizard": Species(
+        id="caiman_lizard", display_name="Caiman Lizard", kind="reptile",
+        base_hp=36, base_atk=20, base_def=28, base_spd=14, base_luck=14,
+        blurb="A crocodile-scaled tree lizard from the Amazon. Crushes snail shells whole.",
+        evolutions=(Evolution("marine_iguana", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="anole", is_starter=False,
+    ),
+    "marine_iguana": Species(
+        id="marine_iguana", display_name="Marine Iguana", kind="reptile",
+        base_hp=40, base_atk=18, base_def=30, base_spd=16, base_luck=15,
+        blurb="The only ocean-going lizard. Sneezes salt and dives ten meters for algae.",
+        evolutions=(Evolution("galapagos_land_iguana", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="anole", is_starter=False,
+    ),
+    "galapagos_land_iguana": Species(
+        id="galapagos_land_iguana", display_name="Galapagos Land Iguana", kind="reptile",
+        base_hp=46, base_atk=22, base_def=32, base_spd=14, base_luck=16,
+        blurb="A four-foot golden iguana that lives a hundred years on a windswept island.",
+        sprite_fallback="anole", is_starter=False,
+    ),
+    "andrias_scheuchzeri": Species(
+        id="andrias_scheuchzeri", display_name="Andrias Scheuchzeri", kind="amphibian",
+        base_hp=38, base_atk=18, base_def=28, base_spd=8, base_luck=14,
+        blurb="A real extinct giant salamander. Its skeleton was once mistaken for a drowned man.",
+        evolutions=(Evolution("metoposaurus", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="axolotl", is_starter=False,
+    ),
+    "metoposaurus": Species(
+        id="metoposaurus", display_name="Metoposaurus", kind="amphibian",
+        base_hp=44, base_atk=22, base_def=30, base_spd=9, base_luck=14,
+        blurb="A flat-headed Triassic giant. Lay in shallow water with only its eyes above the surface.",
+        evolutions=(Evolution("eryops", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="axolotl", is_starter=False,
+    ),
+    "eryops": Species(
+        id="eryops", display_name="Eryops", kind="amphibian",
+        base_hp=50, base_atk=26, base_def=32, base_spd=10, base_luck=15,
+        blurb="A Permian apex amphibian with a blunt skull and crushing jaws.",
+        evolutions=(Evolution("cacops", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="axolotl", is_starter=False,
+    ),
+    "cacops": Species(
+        id="cacops", display_name="Cacops", kind="amphibian",
+        base_hp=56, base_atk=28, base_def=36, base_spd=11, base_luck=16,
+        blurb="An armored amphibian with a row of bony plates down its spine. Survived a long time.",
+        sprite_fallback="axolotl", is_starter=False,
+    ),
+    "madagascar_day_gecko": Species(
+        id="madagascar_day_gecko", display_name="Madagascar Day Gecko", kind="reptile",
+        base_hp=30, base_atk=14, base_def=22, base_spd=18, base_luck=15,
+        blurb="A jewel-bright climbing gecko with eyes like beads of green glass.",
+        evolutions=(Evolution("tokay_giant", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="baby_gecko", is_starter=False,
+    ),
+    "tokay_giant": Species(
+        id="tokay_giant", display_name="Giant Tokay Gecko", kind="reptile",
+        base_hp=36, base_atk=18, base_def=24, base_spd=16, base_luck=14,
+        blurb="A heavy-bodied tropical gecko with a bite like a dog. Refuses to let go.",
+        evolutions=(Evolution("kawekaweau", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="baby_gecko", is_starter=False,
+    ),
+    "kawekaweau": Species(
+        id="kawekaweau", display_name="Kawekaweau", kind="reptile",
+        base_hp=42, base_atk=20, base_def=28, base_spd=14, base_luck=15,
+        blurb="A real extinct New Zealand giant gecko, two feet long. Last seen in the 1800s.",
+        evolutions=(Evolution("delcourts_giant_gecko", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="baby_gecko", is_starter=False,
+    ),
+    "delcourts_giant_gecko": Species(
+        id="delcourts_giant_gecko", display_name="Delcourt's Giant Gecko", kind="reptile",
+        base_hp=50, base_atk=22, base_def=32, base_spd=12, base_luck=16,
+        blurb="The largest gecko ever known. Only one specimen exists, in a Marseilles museum.",
+        sprite_fallback="baby_gecko", is_starter=False,
+    ),
+    "surinam_horned_frog": Species(
+        id="surinam_horned_frog", display_name="Surinam Horned Frog", kind="amphibian",
+        base_hp=32, base_atk=16, base_def=22, base_spd=8, base_luck=16,
+        blurb="A round Amazonian ambusher. Will try to swallow anything it can fit its mouth around.",
+        evolutions=(Evolution("african_bullfrog", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="froglet", is_starter=False,
+    ),
+    "african_bullfrog": Species(
+        id="african_bullfrog", display_name="African Bullfrog", kind="amphibian",
+        base_hp=40, base_atk=20, base_def=26, base_spd=10, base_luck=16,
+        blurb="A two-pound frog that bites. Lives 35 years and digs deep against drought.",
+        evolutions=(Evolution("titicaca_water_frog", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="froglet", is_starter=False,
+    ),
+    "titicaca_water_frog": Species(
+        id="titicaca_water_frog", display_name="Titicaca Water Frog", kind="amphibian",
+        base_hp=46, base_atk=18, base_def=30, base_spd=12, base_luck=17,
+        blurb="A wrinkled high-altitude frog that breathes through folds of saggy skin.",
+        evolutions=(Evolution("triadobatrachus", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="froglet", is_starter=False,
+    ),
+    "triadobatrachus": Species(
+        id="triadobatrachus", display_name="Triadobatrachus", kind="amphibian",
+        base_hp=52, base_atk=20, base_def=32, base_spd=14, base_luck=18,
+        blurb="A real Triassic proto-frog — the earliest known frog ancestor. Half tail, half hop.",
+        sprite_fallback="froglet", is_starter=False,
+    ),
+    "myrmecia_bull_ant": Species(
+        id="myrmecia_bull_ant", display_name="Myrmecia Bull Ant", kind="insect",
+        base_hp=36, base_atk=24, base_def=18, base_spd=22, base_luck=14,
+        blurb="An Australian bull ant the size of a thumb. Stings hard enough to remember.",
+        evolutions=(Evolution("cariridris", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="ant", is_starter=False,
+    ),
+    "cariridris": Species(
+        id="cariridris", display_name="Cariridris", kind="insect",
+        base_hp=42, base_atk=26, base_def=22, base_spd=20, base_luck=14,
+        blurb="A real fossil ant from Brazil. One of the earliest known true ants.",
+        evolutions=(Evolution("formicium_giganteum", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="ant", is_starter=False,
+    ),
+    "formicium_giganteum": Species(
+        id="formicium_giganteum", display_name="Formicium Giganteum", kind="insect",
+        base_hp=50, base_atk=30, base_def=26, base_spd=18, base_luck=15,
+        blurb="A real extinct giant ant. Workers were the size of hummingbirds, queens larger still.",
+        sprite_fallback="ant", is_starter=False,
+    ),
+    "brazilian_wandering_spider": Species(
+        id="brazilian_wandering_spider", display_name="Brazilian Wandering Spider", kind="insect",
+        base_hp=38, base_atk=28, base_def=18, base_spd=18, base_luck=14,
+        blurb="An Amazonian hunter that doesn't web — it walks. The most venomous spider alive.",
+        evolutions=(Evolution("giant_huntsman_spider", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="bee", is_starter=False,
+    ),
+    "giant_huntsman_spider": Species(
+        id="giant_huntsman_spider", display_name="Giant Huntsman Spider", kind="insect",
+        base_hp=44, base_atk=28, base_def=22, base_spd=22, base_luck=14,
+        blurb="The largest spider in the world by leg span. A foot across, fast as a thought.",
+        evolutions=(Evolution("megarachne", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="bee", is_starter=False,
+    ),
+    "megarachne": Species(
+        id="megarachne", display_name="Megarachne", kind="insect",
+        base_hp=52, base_atk=32, base_def=26, base_spd=20, base_luck=15,
+        blurb="A real extinct sea-floor arachnid the size of a dinner plate. Long thought to be a spider.",
+        sprite_fallback="bee", is_starter=False,
+    ),
+    "sclerocephalus": Species(
+        id="sclerocephalus", display_name="Sclerocephalus", kind="amphibian",
+        base_hp=38, base_atk=22, base_def=24, base_spd=8, base_luck=14,
+        blurb="A real Permian giant salamander relative. Hunted in shallow lakes alongside early reptiles.",
+        evolutions=(Evolution("australerpeton", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="newt", is_starter=False,
+    ),
+    "australerpeton": Species(
+        id="australerpeton", display_name="Australerpeton", kind="amphibian",
+        base_hp=44, base_atk=24, base_def=28, base_spd=9, base_luck=14,
+        blurb="A real extinct long-snouted amphibian from Brazil. Crocodile-shaped before crocodiles existed.",
+        evolutions=(Evolution("platyhystrix", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="newt", is_starter=False,
+    ),
+    "platyhystrix": Species(
+        id="platyhystrix", display_name="Platyhystrix", kind="amphibian",
+        base_hp=50, base_atk=26, base_def=32, base_spd=10, base_luck=15,
+        blurb="A real Permian amphibian with a tall sail on its back. Built like a small reptilian dimetrodon.",
+        sprite_fallback="newt", is_starter=False,
+    ),
+    "cave_lion": Species(
+        id="cave_lion", display_name="Cave Lion", kind="beast",
+        base_hp=50, base_atk=36, base_def=24, base_spd=22, base_luck=14,
+        blurb="A real extinct lion that hunted Pleistocene Europe. Larger than any modern lion.",
+        evolutions=(Evolution("american_lion", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="hare", is_starter=False,
+    ),
+    "american_lion": Species(
+        id="american_lion", display_name="American Lion", kind="beast",
+        base_hp=58, base_atk=40, base_def=26, base_spd=20, base_luck=15,
+        blurb="A real extinct lion from Ice Age North America. The largest cat that ever lived.",
+        evolutions=(Evolution("homotherium", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="hare", is_starter=False,
+    ),
+    "homotherium": Species(
+        id="homotherium", display_name="Homotherium", kind="beast",
+        base_hp=64, base_atk=42, base_def=28, base_spd=24, base_luck=16,
+        blurb="A real extinct scimitar-toothed cat. Long legs, short fangs, ran prey to exhaustion.",
+        sprite_fallback="hare", is_starter=False,
+    ),
+    "mongolarachne": Species(
+        id="mongolarachne", display_name="Mongolarachne", kind="insect",
+        base_hp=44, base_atk=26, base_def=28, base_spd=16, base_luck=15,
+        blurb="A real Jurassic spider with a foot-wide leg span. The largest fossil spider known.",
+        evolutions=(Evolution("pneumodesmus", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="ladybug", is_starter=False,
+    ),
+    "pneumodesmus": Species(
+        id="pneumodesmus", display_name="Pneumodesmus", kind="insect",
+        base_hp=52, base_atk=28, base_def=32, base_spd=14, base_luck=16,
+        blurb="A real Silurian millipede — the oldest land animal ever found. Tiny but ancient.",
+        sprite_fallback="ladybug", is_starter=False,
+    ),
+    "bullockornis": Species(
+        id="bullockornis", display_name="Bullockornis", kind="avian",
+        base_hp=48, base_atk=28, base_def=32, base_spd=14, base_luck=15,
+        blurb="A real extinct giant bird from Australia, nicknamed the 'demon duck of doom'.",
+        evolutions=(Evolution("dromornis", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="chick", is_starter=False,
+    ),
+    "dromornis": Species(
+        id="dromornis", display_name="Dromornis", kind="avian",
+        base_hp=56, base_atk=32, base_def=36, base_spd=12, base_luck=16,
+        blurb="A real extinct mihirung bird from Australia. Half a ton of flightless menace.",
+        sprite_fallback="chick", is_starter=False,
+    ),
+    "osteodontornis": Species(
+        id="osteodontornis", display_name="Osteodontornis", kind="avian",
+        base_hp=44, base_atk=28, base_def=24, base_spd=28, base_luck=16,
+        blurb="A real extinct toothed seabird. Twenty-foot wingspan, soaring miles above the waves.",
+        evolutions=(Evolution("gigantornis", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
         sprite_fallback="duckling", is_starter=False,
     ),
-    "thunder_seabird": Species(
-        id="thunder_seabird", display_name="Thunder Seabird", kind="avian",
-        base_hp=54, base_atk=38, base_def=26, base_spd=42, base_luck=20,
-        blurb="A storm-chasing pelagornis. Its wake shreds the crests.",
+    "gigantornis": Species(
+        id="gigantornis", display_name="Gigantornis", kind="avian",
+        base_hp=52, base_atk=32, base_def=26, base_spd=30, base_luck=17,
+        blurb="A real extinct Eocene seabird, possibly the largest flying seabird that ever lived.",
         sprite_fallback="duckling", is_starter=False,
     ),
-    "cavern_seabird": Species(
-        id="cavern_seabird", display_name="Cavern Seabird", kind="avian",
-        base_hp=66, base_atk=26, base_def=46, base_spd=22, base_luck=19,
-        blurb="A cliff-cave seabird with hide like weathered stone.",
-        sprite_fallback="duckling", is_starter=False,
+    "castoroides": Species(
+        id="castoroides", display_name="Castoroides", kind="beast",
+        base_hp=56, base_atk=22, base_def=38, base_spd=12, base_luck=14,
+        blurb="A real extinct giant beaver. Two and a half meters long, weighed as much as a person.",
+        evolutions=(Evolution("procoptodon", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="field_mouse", is_starter=False,
+    ),
+    "procoptodon": Species(
+        id="procoptodon", display_name="Procoptodon", kind="beast",
+        base_hp=62, base_atk=26, base_def=40, base_spd=18, base_luck=15,
+        blurb="A real extinct short-faced kangaroo. Two meters tall, hopped Pleistocene Australia.",
+        sprite_fallback="field_mouse", is_starter=False,
+    ),
+    "helicoprion": Species(
+        id="helicoprion", display_name="Helicoprion", kind="aquatic",
+        base_hp=50, base_atk=38, base_def=28, base_spd=26, base_luck=15,
+        blurb="A real extinct shark with a buzzsaw of teeth in its lower jaw. Looked impossible.",
+        evolutions=(Evolution("cretoxyrhina", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="guppy", is_starter=False,
+    ),
+    "cretoxyrhina": Species(
+        id="cretoxyrhina", display_name="Cretoxyrhina", kind="aquatic",
+        base_hp=58, base_atk=42, base_def=30, base_spd=28, base_luck=16,
+        blurb="A real extinct 'ginsu shark' from the Cretaceous. Carved through sea reptiles.",
+        sprite_fallback="guppy", is_starter=False,
+    ),
+    "protostega": Species(
+        id="protostega", display_name="Protostega", kind="reptile",
+        base_hp=54, base_atk=24, base_def=40, base_spd=12, base_luck=14,
+        blurb="A real extinct sea turtle with a paddle-armed body and a shell six feet across.",
+        evolutions=(Evolution("puentemys", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="hatchling_turtle", is_starter=False,
+    ),
+    "puentemys": Species(
+        id="puentemys", display_name="Puentemys", kind="reptile",
+        base_hp=60, base_atk=26, base_def=44, base_spd=10, base_luck=15,
+        blurb="A real extinct Paleocene side-necked turtle. Eight feet wide, shaped like a coin.",
+        sprite_fallback="hatchling_turtle", is_starter=False,
+    ),
+    "eremotherium": Species(
+        id="eremotherium", display_name="Eremotherium", kind="beast",
+        base_hp=64, base_atk=30, base_def=42, base_spd=10, base_luck=14,
+        blurb="A real extinct giant ground sloth. Stood twenty feet tall reaching for treetops.",
+        evolutions=(Evolution("arctotherium", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="hedgehog", is_starter=False,
+    ),
+    "arctotherium": Species(
+        id="arctotherium", display_name="Arctotherium", kind="beast",
+        base_hp=72, base_atk=36, base_def=44, base_spd=12, base_luck=15,
+        blurb="A real extinct South American short-faced bear. The largest bear that ever lived.",
+        sprite_fallback="hedgehog", is_starter=False,
+    ),
+    "titanichthys": Species(
+        id="titanichthys", display_name="Titanichthys", kind="aquatic",
+        base_hp=58, base_atk=30, base_def=36, base_spd=14, base_luck=14,
+        blurb="A real extinct giant placoderm. Filter-fed like a whale shark with armor plates.",
+        evolutions=(Evolution("xiphactinus", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="minnow", is_starter=False,
+    ),
+    "xiphactinus": Species(
+        id="xiphactinus", display_name="Xiphactinus", kind="aquatic",
+        base_hp=66, base_atk=38, base_def=32, base_spd=22, base_luck=15,
+        blurb="A real extinct Cretaceous predatory fish. Thirteen feet long with a mouth full of fangs.",
+        sprite_fallback="minnow", is_starter=False,
+    ),
+    "thylacosmilus": Species(
+        id="thylacosmilus", display_name="Thylacosmilus", kind="beast",
+        base_hp=56, base_atk=38, base_def=22, base_spd=24, base_luck=14,
+        blurb="A real extinct South American sabertooth, but a marsupial. Convergent evolution at work.",
+        evolutions=(Evolution("machairodus", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="hare", is_starter=False,
+    ),
+    "machairodus": Species(
+        id="machairodus", display_name="Machairodus", kind="beast",
+        base_hp=64, base_atk=42, base_def=24, base_spd=26, base_luck=15,
+        blurb="A real extinct sabertooth cat genus. Cousin of smilodon, leaner and longer-legged.",
+        sprite_fallback="hare", is_starter=False,
+    ),
+    "prognathodon": Species(
+        id="prognathodon", display_name="Prognathodon", kind="reptile",
+        base_hp=60, base_atk=36, base_def=30, base_spd=24, base_luck=14,
+        blurb="A real extinct mosasaur with a deep skull and crushing teeth. Bit through ammonites.",
+        evolutions=(Evolution("kronosaurus", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="skink", is_starter=False,
+    ),
+    "kronosaurus": Species(
+        id="kronosaurus", display_name="Kronosaurus", kind="reptile",
+        base_hp=70, base_atk=42, base_def=32, base_spd=22, base_luck=15,
+        blurb="A real extinct giant pliosaur. Forty feet long, named for the titan that ate his children.",
+        sprite_fallback="skink", is_starter=False,
+    ),
+    "kelenken": Species(
+        id="kelenken", display_name="Kelenken", kind="avian",
+        base_hp=58, base_atk=34, base_def=28, base_spd=26, base_luck=15,
+        blurb="A real extinct terror bird. Largest skull of any known bird, ever.",
+        evolutions=(Evolution("titanis_walleri", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="sparrow", is_starter=False,
+    ),
+    "titanis_walleri": Species(
+        id="titanis_walleri", display_name="Titanis Walleri", kind="avian",
+        base_hp=64, base_atk=38, base_def=30, base_spd=28, base_luck=16,
+        blurb="A real extinct North American terror bird. Crossed the Panama land bridge to hunt.",
+        sprite_fallback="sparrow", is_starter=False,
+    ),
+    "lethiscus": Species(
+        id="lethiscus", display_name="Lethiscus", kind="amphibian",
+        base_hp=50, base_atk=24, base_def=32, base_spd=12, base_luck=14,
+        blurb="A real extinct early limbless amphibian, found in Scotland. Like a small ancient eel.",
+        evolutions=(Evolution("diplocaulus", requirements={"hp": 28}, stat_bonus=_TIER_5_BONUS),),
+        sprite_fallback="tadpole", is_starter=False,
+    ),
+    "diplocaulus": Species(
+        id="diplocaulus", display_name="Diplocaulus", kind="amphibian",
+        base_hp=56, base_atk=26, base_def=36, base_spd=14, base_luck=15,
+        blurb="A real Permian amphibian with a boomerang-shaped head. Looks made-up but isn't.",
+        sprite_fallback="tadpole", is_starter=False,
+    ),
+    "pterygotus": Species(
+        id="pterygotus", display_name="Pterygotus", kind="aquatic",
+        base_hp=60, base_atk=32, base_def=36, base_spd=18, base_luck=15,
+        blurb="A real extinct giant sea scorpion. Six feet long with grasping pincers.",
+        sprite_fallback="shrimp", is_starter=False,
+    ),
+    "tusoteuthis": Species(
+        id="tusoteuthis", display_name="Tusoteuthis", kind="aquatic",
+        base_hp=64, base_atk=32, base_def=38, base_spd=22, base_luck=16,
+        blurb="A real extinct Cretaceous giant squid. Estimated at thirty feet, hunted by mosasaurs.",
+        sprite_fallback="snail", is_starter=False,
+    ),
+    "argentavis_apex": Species(
+        id="argentavis_apex", display_name="Argentavis Imperator", kind="avian",
+        base_hp=56, base_atk=38, base_def=26, base_spd=30, base_luck=16,
+        blurb="A real extinct giant teratorn — twenty-foot wingspan, the largest flying bird ever.",
+        sprite_fallback="wren", is_starter=False,
     ),
 }
 
@@ -2762,6 +2616,8 @@ _assign_mythic_levels()
 class Sprite:
     idle_frames: list[list[str]]
     quest_frames: list[list[str]] = field(default_factory=list)
+    attack_frames: list[list[str]] = field(default_factory=list)
+    hurt_frames: list[list[str]] = field(default_factory=list)
 
 
 _SPRITE_CACHE: dict[str, Sprite] = {}
@@ -2769,15 +2625,17 @@ _SHARED_QUEST_CACHE: Optional[list[list[str]]] = None
 
 
 def _parse_sprite_file(text: str) -> Sprite:
-    """Parse a sprite .txt file into idle / quest frame banks.
+    """Parse a sprite .txt file into idle / quest / attack / hurt frame banks.
 
     Frames inside each bank are delimited by a line containing only
-    `--FRAME--`. The optional `--QUEST--` marker (also on its own line)
-    switches subsequent frames from the idle bank into the quest bank.
+    `--FRAME--`. Bank-switch markers (each on its own line) shift
+    subsequent frames into a new bank: `--QUEST--`, `--ATTACK--`, `--HURT--`.
     Leading/trailing blank lines on each frame are trimmed.
     """
     idle: list[list[str]] = []
     quest: list[list[str]] = []
+    attack: list[list[str]] = []
+    hurt: list[list[str]] = []
     current_bank = idle
     buf: list[str] = []
     for raw in text.splitlines():
@@ -2793,6 +2651,18 @@ def _parse_sprite_file(text: str) -> Sprite:
                 buf = []
             current_bank = quest
             continue
+        if marker == "--ATTACK--":
+            if buf:
+                current_bank.append(buf)
+                buf = []
+            current_bank = attack
+            continue
+        if marker == "--HURT--":
+            if buf:
+                current_bank.append(buf)
+                buf = []
+            current_bank = hurt
+            continue
         buf.append(raw)
     if buf:
         current_bank.append(buf)
@@ -2807,6 +2677,8 @@ def _parse_sprite_file(text: str) -> Sprite:
     return Sprite(
         idle_frames=[f for f in (_trim(f) for f in idle) if f],
         quest_frames=[f for f in (_trim(f) for f in quest) if f],
+        attack_frames=[f for f in (_trim(f) for f in attack) if f],
+        hurt_frames=[f for f in (_trim(f) for f in hurt) if f],
     )
 
 
@@ -2844,6 +2716,16 @@ def species_motion_frames(species_id: str) -> list[list[str]]:
     returns an empty list.
     """
     return _load_sprite(species_id).quest_frames
+
+
+def attack_frames(species_id: str) -> list[list[str]]:
+    """Return the species's --ATTACK-- bank, or empty list if absent."""
+    return _load_sprite(species_id).attack_frames
+
+
+def hurt_frames(species_id: str) -> list[list[str]]:
+    """Return the species's --HURT-- bank, or empty list if absent."""
+    return _load_sprite(species_id).hurt_frames
 
 
 def quest_sprite_frames() -> list[list[str]]:

@@ -35,7 +35,8 @@ import traceback
 from types import FrameType
 from typing import Any, Optional
 
-from . import paths, quests, vignettes
+from . import leveling, paths, quests, skills, vignettes
+from .llm import extract_json_object as _extract_json_object
 from .quests import IdleDecision
 from .state import Buddy, State, load_state, mutate_state
 
@@ -182,30 +183,32 @@ _ORACLE_SYSTEM_PROMPT = (
 )
 
 
-def _extract_json_object(text: str) -> Optional[dict]:
-    """Pull the first JSON object out of `text`, tolerating ```json fences and
-    surrounding prose. Returns None if nothing parseable is found.
-    """
-    if not text:
-        return None
-    start = text.find("{")
-    end = text.rfind("}")
-    if start == -1 or end == -1 or end <= start:
-        return None
-    try:
-        parsed = json.loads(text[start:end + 1])
-    except json.JSONDecodeError:
-        return None
-    return parsed if isinstance(parsed, dict) else None
+
+_llm_failures = 0
+_llm_backoff_until = 0.0
+_LLM_MAX_FAILURES = 3
+_LLM_BACKOFF_S = 300  # skip LLM for 5 min after consecutive failures
+
+
+def _llm_fail() -> None:
+    global _llm_failures, _llm_backoff_until
+    _llm_failures += 1
+    if _llm_failures >= _LLM_MAX_FAILURES:
+        _llm_backoff_until = time.time() + _LLM_BACKOFF_S
 
 
 def _call_claude_p(prompt: str) -> Optional[dict]:
     """Invoke `claude -p` and parse a JSON decision out of its result. Returns
     None on any failure (missing binary, timeout, non-zero exit, unparseable
-    output).
+    output). Circuit breaker skips the call after _LLM_MAX_FAILURES consecutive
+    failures (resets after _LLM_BACKOFF_S or on success).
     """
+    global _llm_failures, _llm_backoff_until
+    if _llm_failures >= _LLM_MAX_FAILURES and time.time() < _llm_backoff_until:
+        return None  # circuit open
     claude_bin = shutil.which("claude")
     if not claude_bin:
+        _llm_fail()
         return None
     cmd = [
         claude_bin, "-p", prompt,
@@ -222,17 +225,26 @@ def _call_claude_p(prompt: str) -> Optional[dict]:
             cmd, capture_output=True, text=True, timeout=SUBPROCESS_TIMEOUT_S,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        _llm_fail()
         return None
     if res.returncode != 0:
+        _llm_fail()
         return None
     try:
         envelope = json.loads(res.stdout)
     except json.JSONDecodeError:
+        _llm_fail()
         return None
     result_raw = envelope.get("result")
     if not isinstance(result_raw, str):
+        _llm_fail()
         return None
-    return _extract_json_object(result_raw)
+    result = _extract_json_object(result_raw)
+    if result is not None:
+        _llm_failures = 0  # success — reset breaker
+    else:
+        _llm_fail()
+    return result
 
 
 def _validate_llm_decision(parsed: dict, state: State) -> Optional[IdleDecision]:
@@ -300,10 +312,14 @@ def _apply(decision: IdleDecision) -> None:
             return
 
         def fn_flavor(s: State) -> None:
-            s.add_event(text)
-            if s.buddy is not None:
-                bump = 2 + int(s.buddy.traits.get("curiosity", 5)) // 3
-                s.buddy.mood = min(s.buddy.max_mood, s.buddy.mood + bump)
+            if s.buddy is None:
+                return
+            # Idle vignettes live on the buddy as ephemeral mood text — the
+            # pane renders them under the sprite, they do NOT pollute the
+            # event log (which is for quest/level/combat milestones).
+            s.buddy.idle_flavor = text
+            bump = 2 + int(s.buddy.traits.get("curiosity", 5)) // 3
+            s.buddy.mood = min(s.buddy.max_mood, s.buddy.mood + bump)
 
         mutate_state(fn_flavor)
         _log_tick({
@@ -360,14 +376,88 @@ def _regen() -> None:
         _log_exc(exc)
 
 
+def _auto_claim() -> None:
+    """Claim the active quest if it's done. Mirrors server.claim_quest's
+    in-mutate sequence so recent_events reads identically regardless of who
+    claimed. Logs one tick on success.
+    """
+    captured: dict[str, Any] = {}
+
+    def fn(s: State) -> None:
+        b = s.buddy
+        if b is None or b.quest is None or not b.quest.is_done():
+            return
+        qid = b.quest.id
+        result = quests.claim(b)
+        fired_names: list[str] = []
+        for sid in result.fired_skills:
+            try:
+                fired_names.append(skills.get(sid).name)
+            except KeyError:
+                fired_names.append(sid)
+        s.add_event(quests.format_claim_event_line(result, fired_names))
+        leveling.check_level_ups(s)
+        captured["quest_id"] = qid
+        captured["success"] = result.success
+        captured["xp"] = result.xp
+
+    try:
+        mutate_state(fn)
+    except Exception as exc:
+        _log_exc(exc)
+        return
+    if "quest_id" in captured:
+        _log_tick({
+            "action": "claim_quest",
+            "quest": captured["quest_id"],
+            "reason": "auto-claim: quest done",
+            "success": captured["success"],
+            "xp": captured["xp"],
+        })
+
+
+MID_QUEST_FLAVOR_CHANCE = 0.6
+
+
+def _emit_mid_quest_flavor() -> None:
+    """Maybe push one quest flavor line into recent_events. Gated by chance
+    and a no-immediate-repeat check so the feed stays varied.
+    """
+    def fn(s: State) -> None:
+        if s.buddy is None or s.buddy.quest is None:
+            return
+        line = quests.pick_flavor_line(s.buddy.quest.id, s.buddy.name)
+        if s.recent_events:
+            last = s.recent_events[-1]
+            suffix = line.split(s.buddy.name, 1)[-1]
+            if suffix and last.endswith(suffix):
+                return
+        s.add_event(line)
+
+    try:
+        mutate_state(fn)
+    except Exception as exc:
+        _log_exc(exc)
+
+
 def _maybe_tick() -> None:
     _regen()
     state = load_state()
     b = state.buddy
     if b is None:
-        return  # no buddy yet
+        _log_tick({"action": "noop", "reason": "no buddy"})
+        return
     if b.quest is not None:
-        return  # busy — let the existing quest finish
+        if b.quest.is_done():
+            _auto_claim()
+            return
+        if random.random() < MID_QUEST_FLAVOR_CHANCE:
+            _emit_mid_quest_flavor()
+        _log_tick({
+            "action": "noop",
+            "reason": f"quest in progress: {b.quest.id} ({b.quest.remaining()}s left)",
+        })
+        return
     decision = _decide(state)
     _apply(decision)
 

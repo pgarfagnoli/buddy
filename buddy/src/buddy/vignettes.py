@@ -40,6 +40,23 @@ VIGNETTES: tuple[Vignette, ...] = (
     Vignette("stare_moss",   "{name} stares at a patch of moss and contemplates life",   ("patient",)),
     Vignette("spin_once",    "{name} spins in place once, for no reason",                ("mischief",)),
     Vignette("rummage",      "{name} rummages in its own inventory pouch",               ("curious",)),
+    Vignette("count_toes",   "{name} counts its toes, loses count, starts again",        ("patient",)),
+    Vignette("doze_off",     "{name} dozes off mid-thought and snores faintly",          ("lazy",)),
+    Vignette("twig_balance", "{name} balances a twig on its nose for three full seconds", ("patient", "mischief")),
+    Vignette("acorn_kick",   "{name} kicks a stray acorn and pretends it was on purpose", ("mischief",)),
+    Vignette("yawn_wide",    "{name} yawns so wide its whole face creases",              ("lazy",)),
+    Vignette("study_ant",    "{name} studies an ant convoy with great seriousness",      ("curious", "patient")),
+    Vignette("howl_practice", "{name} practices a tiny howl and is satisfied",           ("bold",)),
+    Vignette("paw_clean",    "{name} cleans one paw with great care, ignores the others", ("patient",)),
+    Vignette("breeze_sniff", "{name} sniffs the breeze and decides nothing is happening", ()),
+    Vignette("shadow_sneak", "{name} sneaks up on its own shadow and pounces",           ("mischief",)),
+    Vignette("rock_tap",     "{name} taps a rock twice, listens, taps once more",        ("curious",)),
+    Vignette("chest_thump",  "{name} thumps its chest at no one in particular",          ("bold",)),
+    Vignette("circle_thrice", "{name} circles three times before settling on the spot",  ("lazy",)),
+    Vignette("button_nose",  "{name} presses its nose to a flower and goes cross-eyed",  ("curious",)),
+    Vignette("idle_hum",     "{name} hums a low note and pretends it's a song",          ()),
+    Vignette("imagine_hat",  "{name} imagines itself in a tiny hat and approves",        ("mischief",)),
+    Vignette("rear_up",      "{name} rears up on its hind legs to look bigger",          ("bold",)),
 )
 
 

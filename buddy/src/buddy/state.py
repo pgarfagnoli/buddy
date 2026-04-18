@@ -64,6 +64,15 @@ class Combat:
     enemy_max_hp: int
     started_at: int
     last_round_at: int
+    last_attacker: Optional[str] = None  # "buddy" | "enemy" | None — drives pose animation
+    next_buddy_strike_at: int = 0        # epoch s; 0 = "uninitialized, set on first tick"
+    next_enemy_strike_at: int = 0
+    rampage_stacks: int = 0              # +1 per landed buddy strike, capped at 5 in _buddy_attack
+    enemy_poison_dmg: int = 0            # damage applied per strike while strikes_left > 0
+    enemy_poison_strikes_left: int = 0
+    buddy_poison_dmg: int = 0
+    buddy_poison_strikes_left: int = 0
+    engaged_skills: list[str] = field(default_factory=list)  # skills that paid MP at spawn and are "on" for this encounter
     log: list[str] = field(default_factory=list)
 
 
@@ -104,6 +113,7 @@ class Buddy:
     active_skills: list[str] = field(default_factory=list)
     combat: Optional[Combat] = None
     last_combat_spawn_at: int = 0
+    idle_flavor: str = ""  # last idle vignette text — rendered under the sprite when idle
 
     @property
     def max_hp(self) -> int:
@@ -127,6 +137,18 @@ class State:
 
 
 # ─── (de)serialization ──────────────────────────────────────────────────────
+
+# Naturalization rename pass: old fantasy species ids resolve to their
+# real-species replacements on load so existing buddies don't break.
+# Populated as Phase 2 species renames land. Keys = legacy id, value =
+# new real-species id. Applied inside _buddy_from_dict.
+_LEGACY_SPECIES_IDS: dict[str, str] = {
+    # Wyrm chain → real cave-dweller line (olm/waterdog).
+    "pond_wyrm": "waterdog",
+    "lake_wyrm": "waterdog",
+    "crystal_wyrm": "waterdog",
+}
+
 
 def _buddy_to_dict(b: Buddy) -> dict[str, Any]:
     d = {
@@ -171,11 +193,21 @@ def _buddy_to_dict(b: Buddy) -> dict[str, Any]:
                 "enemy_max_hp": b.combat.enemy_max_hp,
                 "started_at": b.combat.started_at,
                 "last_round_at": b.combat.last_round_at,
+                "last_attacker": b.combat.last_attacker,
+                "next_buddy_strike_at": b.combat.next_buddy_strike_at,
+                "next_enemy_strike_at": b.combat.next_enemy_strike_at,
+                "rampage_stacks": b.combat.rampage_stacks,
+                "enemy_poison_dmg": b.combat.enemy_poison_dmg,
+                "enemy_poison_strikes_left": b.combat.enemy_poison_strikes_left,
+                "buddy_poison_dmg": b.combat.buddy_poison_dmg,
+                "buddy_poison_strikes_left": b.combat.buddy_poison_strikes_left,
+                "engaged_skills": list(b.combat.engaged_skills),
                 "log": list(b.combat.log),
             }
             if b.combat else None
         ),
         "last_combat_spawn_at": b.last_combat_spawn_at,
+        "idle_flavor": b.idle_flavor,
     }
     return d
 
@@ -197,6 +229,15 @@ def _buddy_from_dict(d: dict[str, Any]) -> Buddy:
             enemy_max_hp=int(c["enemy_max_hp"]),
             started_at=int(c["started_at"]),
             last_round_at=int(c["last_round_at"]),
+            last_attacker=(str(c["last_attacker"]) if c.get("last_attacker") else None),
+            next_buddy_strike_at=int(c.get("next_buddy_strike_at", 0)),
+            next_enemy_strike_at=int(c.get("next_enemy_strike_at", 0)),
+            rampage_stacks=int(c.get("rampage_stacks", 0)),
+            enemy_poison_dmg=int(c.get("enemy_poison_dmg", 0)),
+            enemy_poison_strikes_left=int(c.get("enemy_poison_strikes_left", 0)),
+            buddy_poison_dmg=int(c.get("buddy_poison_dmg", 0)),
+            buddy_poison_strikes_left=int(c.get("buddy_poison_strikes_left", 0)),
+            engaged_skills=[str(x) for x in c.get("engaged_skills", [])],
             log=[str(x) for x in c.get("log", [])],
         )
         if c else None
@@ -226,8 +267,9 @@ def _buddy_from_dict(d: dict[str, Any]) -> Buddy:
         else:
             personality = "balanced"
             traits = dict(personalities.PERSONALITIES["balanced"].traits)
+    species_id = _LEGACY_SPECIES_IDS.get(d["species"], d["species"])
     return Buddy(
-        species=d["species"], name=d["name"], level=d.get("level", 1), xp=d.get("xp", 0),
+        species=species_id, name=d["name"], level=d.get("level", 1), xp=d.get("xp", 0),
         stats=stats, current_hp=d.get("current_hp", stats.hp),
         stat_points_unspent=d.get("stat_points_unspent", 0),
         inventory=list(d.get("inventory", [])), quest=quest,
@@ -245,6 +287,7 @@ def _buddy_from_dict(d: dict[str, Any]) -> Buddy:
         active_skills=[str(x) for x in d.get("active_skills", [])],
         combat=combat,
         last_combat_spawn_at=int(d.get("last_combat_spawn_at", 0)),
+        idle_flavor=str(d.get("idle_flavor", "") or ""),
     )
 
 
@@ -300,7 +343,13 @@ def save_state(state: State) -> None:
     """Atomically write state. Caller must already hold the lock if coordinating."""
     p = paths.state_file()
     tmp = p.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(state_to_dict(state), indent=2))
+    try:
+        data = json.dumps(state_to_dict(state), indent=2)
+    except (TypeError, ValueError) as exc:
+        import sys
+        print(f"[buddy] save_state serialization failed: {exc}", file=sys.stderr)
+        raise
+    tmp.write_text(data)
     os.rename(tmp, p)
 
 
