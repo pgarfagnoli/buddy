@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""buddy-pane — standalone animated status pane for the buddy plugin.
+
+Run this in a second terminal (any terminal) alongside Claude Code. It polls
+the plugin's state file and repaints a compact HP/XP/quest view.
+
+Ctrl-C to quit.
+"""
+import sys
+from pathlib import Path
+
+_SERVER_DIR = Path(__file__).resolve().parent.parent / "server"
+if str(_SERVER_DIR) not in sys.path:
+    sys.path.insert(0, str(_SERVER_DIR))
+
+from pane import main  # noqa: E402
+
+if __name__ == "__main__":
+    sys.exit(main())
