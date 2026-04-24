@@ -1,22 +1,38 @@
-"""Stub SessionStart hook. Touches a marker file in CLAUDE_PLUGIN_DATA so we
-can verify the plugin's hook wiring fires without any XP/state logic yet."""
+"""SessionStart hook: ensure state file exists and, on first run, nudge the
+user to pick a starter. Emits stdout, which Claude Code surfaces as a system
+reminder inside the session context.
+"""
 from __future__ import annotations
 
-import os
+import json
 import sys
-import time
 from pathlib import Path
+
+_SERVER_DIR = Path(__file__).resolve().parent.parent
+if str(_SERVER_DIR) not in sys.path:
+    sys.path.insert(0, str(_SERVER_DIR))
+
+import state  # noqa: E402
 
 
 def main() -> int:
-    data_dir = os.environ.get("CLAUDE_PLUGIN_DATA")
-    if not data_dir:
-        # Fallback for dev mode / missing env
-        data_dir = str(Path.home() / ".claude" / "plugins" / "data" / "buddy-dev")
-    Path(data_dir).mkdir(parents=True, exist_ok=True)
-    (Path(data_dir) / "session_start.marker").write_text(
-        f"session_start fired at {int(time.time())}\n"
-    )
+    try:
+        _ = json.loads(sys.stdin.read() or "{}")
+    except json.JSONDecodeError:
+        pass
+    try:
+        state.init_state_if_missing()
+        s = state.load_state()
+    except Exception:
+        return 0
+    if s.buddy is None:
+        # stdout from a SessionStart hook is injected as a system reminder.
+        print(
+            "buddy is installed but no buddy has been chosen yet. "
+            "If the user mentions their buddy, suggest they pick a starter — "
+            "call the list_species tool, then choose_buddy with the chosen id "
+            "and a name they like."
+        )
     return 0
 
 
