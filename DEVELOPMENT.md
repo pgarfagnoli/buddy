@@ -18,10 +18,9 @@ An RPG buddy for Claude Code. A Pokemon-style ASCII creature lives in a tmux sid
 
 End users: see the repo root README for the tap + `brew install buddy` flow.
 
-For development from source, two commands from this subfolder:
+For development from source, two commands from the repo root:
 
 ```bash
-cd buddy
 pip install --user -e .
 buddy-install
 ```

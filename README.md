@@ -68,7 +68,7 @@ brew untap pgarfagnoli/buddy
 
 ## Learn more
 
-- **[buddy/README.md](./buddy/README.md)** — full feature list, architecture, XP/level formulas, developer/editable-install flow
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)** — full feature list, architecture, XP/level formulas, developer/editable-install flow
 - **[Formula/buddy.rb](./Formula/buddy.rb)** — the Homebrew formula
 
 ## Repository layout
@@ -76,9 +76,9 @@ brew untap pgarfagnoli/buddy
 ```
 homebrew-buddy/
 ├── Formula/
-│   └── buddy.rb    ← Homebrew formula
-└── buddy/          ← Python package source
-    ├── pyproject.toml
-    ├── src/buddy/
-    └── README.md
+│   └── buddy.rb        ← Homebrew formula
+├── src/buddy/          ← Python package source
+├── pyproject.toml
+├── README.md
+└── DEVELOPMENT.md      ← developer/editable-install docs
 ```

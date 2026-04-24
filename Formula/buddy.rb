@@ -157,10 +157,7 @@ class Buddy < Formula
   end
 
   def install
-    # Python package lives in a subfolder of the tap repo.
-    cd "buddy" do
-      virtualenv_install_with_resources
-    end
+    virtualenv_install_with_resources
   end
 
   test do
