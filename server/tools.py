@@ -780,3 +780,30 @@ def reset_buddy(confirm: bool = False) -> dict[str, Any]:
         state.add_event("buddy reset")
 
     return _snapshot(mutate_state(fn))
+
+
+@mcp.tool()
+def run_migration(dry_run: bool = False) -> dict[str, Any]:
+    """Clean up pre-v0.4.0 buddy artifacts: legacy hook entries + statusLine
+    in ~/.claude/settings.json, user-scope MCP server registrations named
+    `buddy` or `mcp-creature-bot`, and shipped `/buddy*` files under
+    ~/.claude/commands/. Settings.json is backed up with a timestamped
+    suffix before any mutation.
+
+    Idempotent — writes a marker in $CLAUDE_PLUGIN_DATA so subsequent calls
+    report `already-migrated`. Pass `dry_run=true` to preview the report
+    without making changes.
+
+    Returns a dict with:
+      status            — "migrated" | "nothing-to-do" | "already-migrated"
+                          | "would-migrate" (dry-run with findings)
+      legacy_hooks      — list of {event, command} entries stripped
+      legacy_statusline — command removed, or null
+      legacy_mcp_servers — user-scope MCP names detected
+      removed_mcp_servers — names actually removed (on non-dry-run)
+      legacy_commands   — ~/.claude/commands/ files detected
+      deleted_commands  — command files actually deleted (on non-dry-run)
+      settings_backup   — path to the settings.json backup (on non-dry-run)
+    """
+    import migrate
+    return migrate.run_legacy_migration(dry_run=dry_run)

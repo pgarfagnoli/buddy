@@ -13,6 +13,7 @@ if str(_SERVER_DIR) not in sys.path:
     sys.path.insert(0, str(_SERVER_DIR))
 
 import state  # noqa: E402
+import migrate  # noqa: E402
 
 
 def main() -> int:
@@ -25,8 +26,24 @@ def main() -> int:
         s = state.load_state()
     except Exception:
         return 0
+
+    # If the user upgraded from the Homebrew/pip era, their settings.json and
+    # ~/.claude/commands/ may still carry pre-v0.4.0 buddy entries. Nudge them
+    # to run /buddy:migrate — exactly once. The nudge goes to stdout, which
+    # Claude Code injects as a system reminder.
+    try:
+        if migrate.is_migration_needed():
+            print(
+                "buddy plugin: pre-v0.4.0 artifacts detected in ~/.claude/ "
+                "(likely leftover hooks, statusLine, MCP registration, or "
+                "/buddy* command files from a previous Homebrew install). "
+                "Suggest the user run /buddy:migrate — it backs up settings.json "
+                "and strips the stale entries."
+            )
+    except Exception:
+        pass
+
     if s.buddy is None:
-        # stdout from a SessionStart hook is injected as a system reminder.
         print(
             "buddy is installed but no buddy has been chosen yet. "
             "If the user mentions their buddy, suggest they pick a starter — "
