@@ -60,21 +60,17 @@ It polls the buddy state every 2 seconds and repaints a compact HP / MP / XP / q
 ## Uninstall
 
 ```
-/plugin uninstall buddy
+/plugin uninstall buddy --keep-data     # your buddy's level/XP/quests survive a reinstall
+/plugin uninstall buddy                 # ⚠️  default: wipes state too
 ```
 
-Claude Code removes the hooks, the MCP registration, and the skills. State under `$CLAUDE_PLUGIN_DATA` (your buddy's level, XP, quest progress) is preserved by default; pass `--keep-data=false` to wipe it too.
+**Default behaviour is destructive.** Claude Code removes the hooks, the MCP registration, the skills, **and the plugin's persistent data directory** (`~/.claude/plugins/data/buddy/` — that's where `state.json`, `xp.log`, and your buddy's everything live). Pass `--keep-data` if you might reinstall later and want your Lv-*n* creature back.
+
+If you started on v0.4.0 fresh, your *only* state is in `$CLAUDE_PLUGIN_DATA` — no backup anywhere. If you upgraded from v0.3.x, a snapshot-at-migration-time still sits at `~/.claude/buddy/` (untouched by `/buddy:migrate`), so a reinstall would re-migrate from that baseline — but any progress earned after the upgrade is plugin-only and lost without `--keep-data`.
 
 ## Migrating from v0.3.x (Homebrew era)
 
-If you installed buddy via `brew install buddy` before v0.4.0, the upgrade is:
-
-```bash
-brew uninstall buddy
-brew untap pgarfagnoli/buddy
-```
-
-Then inside Claude Code:
+If you installed buddy via `brew install buddy` before v0.4.0, the full upgrade is three slash-commands inside Claude Code:
 
 ```
 /plugin marketplace add pgarfagnoli/buddy
@@ -82,21 +78,18 @@ Then inside Claude Code:
 /buddy:migrate
 ```
 
+Or, equivalently, once the plugin is installed, tell Claude in plain English: *"migrate my old buddy install and uninstall the deprecated homebrew package."* The `/buddy:migrate` skill covers both halves.
+
 What each step does:
 
-- **`brew uninstall buddy`** — removes the old Python package. Your data at `~/.claude/buddy/` is not touched.
-- **`/plugin install buddy`** — installs the new plugin; Claude Code registers its hooks, MCP server, and skills declaratively. Your Lv-*n* creature is copied from `~/.claude/buddy/state.json` into `$CLAUDE_PLUGIN_DATA/` on first run — no manual import.
-- **`/buddy:migrate`** — one-shot cleanup of v0.3.x leftovers in `~/.claude/settings.json` and `~/.claude/commands/`. Specifically:
-  1. Backs up `~/.claude/settings.json` with a timestamped `.bak.<epoch>.pre-v0.4.0-migrate` suffix.
-  2. Strips hook entries whose command contains `buddy.hooks.*` (or the even-older `mcp_creature_bot.hooks.*`).
-  3. Removes the old statusLine if it pointed at `buddy.scripts.statusline`.
-  4. Runs `claude mcp remove --scope user buddy` if the legacy user-scope MCP registration is still around.
-  5. Deletes shipped `/buddy*` markdown files in `~/.claude/commands/` — but only those that still match their original content; anything you edited is left alone.
-  6. Writes a marker in `$CLAUDE_PLUGIN_DATA` so subsequent invocations are no-ops.
+- **`/plugin install buddy`** — Claude Code registers the new hooks, MCP server, and skills declaratively. Your Lv-*n* creature is copied from `~/.claude/buddy/state.json` into `~/.claude/plugins/data/buddy/` on first run, preserved end-to-end.
+- **`/buddy:migrate`** runs in two phases:
+  1. **`run_migration` MCP tool** — backs up `~/.claude/settings.json` to `.bak.<epoch>.pre-v0.4.0-migrate`, then strips: hook entries whose command contains `buddy.hooks.*` or `mcp_creature_bot.hooks.*`; the old statusLine if it pointed at `buddy.scripts.statusline`; any user-scope MCP server registration for `buddy`/`mcp-creature-bot`; shipped `/buddy*` files in `~/.claude/commands/`. User-edited files are left alone. Idempotent via a marker in the plugin data dir.
+  2. **Homebrew cleanup** — the skill checks `brew list buddy` and `brew tap`; if either still shows the old install, it asks for your confirmation and runs `brew uninstall buddy` + `brew untap pgarfagnoli/buddy` (and `pgarfagnoli/homebrew-buddy` for the pre-rename tap name). You approve each Bash call.
 
-`/buddy:migrate` runs a dry-run first and shows you what it would change — you confirm before it touches anything. If you skip this step, your buddy still works (the plugin's hooks supersede the old ones at the MCP-server-dispatch level), but Claude Code will log `ModuleNotFoundError: No module named 'buddy'` every session as the legacy hooks keep firing. The SessionStart nudge will remind you.
+A dry run precedes any mutation — you see the exact report before anything changes. After the migration completes, restart Claude Code so the stripped hooks stop firing in the current session.
 
-After a successful migration, restart Claude Code so the stripped hooks stop firing in the current session.
+If you skip `/buddy:migrate` entirely, your buddy still works (the plugin's hooks supersede the old ones for dispatch), but Claude Code logs `ModuleNotFoundError: No module named 'buddy'` every session as the legacy hooks keep firing harmlessly. The plugin's SessionStart hook nudges you each time you open Claude.
 
 ## Repository layout
 
