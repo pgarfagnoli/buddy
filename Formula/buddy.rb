@@ -3,8 +3,8 @@ class Buddy < Formula
 
   desc "RPG buddy for Claude Code — ASCII companion that gains XP from your prompts"
   homepage "https://github.com/pgarfagnoli/homebrew-buddy"
-  url "https://github.com/pgarfagnoli/homebrew-buddy/archive/refs/tags/v0.3.3.tar.gz"
-  sha256 "e14fae506c206f7222c3a2b07ec839bc20d4602b2cbdc3431dbb5de84f6cb4a5"
+  url "https://github.com/pgarfagnoli/homebrew-buddy/archive/refs/tags/v0.3.4.tar.gz"
+  sha256 "8c53923b4ad0c718201575e6c6708172ce389599b8b069b142371b2b16eea92b"
   license "MIT"
 
   depends_on "python@3.12"
