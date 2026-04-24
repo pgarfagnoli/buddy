@@ -14,7 +14,10 @@ from pathlib import Path
 
 
 CLAUDE_SETTINGS = Path.home() / ".claude" / "settings.json"
-MARKER_COMMAND = "python -m buddy.scripts.statusline"
+# Tail used to recognise our statusLine no matter what Python path precedes it.
+# Older installs stored `python -m …`; new installs store `<abs-path> -m …`.
+STATUSLINE_MODULE_TAIL = "-m buddy.scripts.statusline"
+MARKER_COMMAND = f"{sys.executable} {STATUSLINE_MODULE_TAIL}"
 
 
 def main() -> int:
@@ -30,8 +33,19 @@ def main() -> int:
         settings = {}
 
     existing = settings.get("statusLine")
-    if isinstance(existing, dict) and MARKER_COMMAND in str(existing.get("command", "")):
+    existing_cmd = str(existing.get("command", "")) if isinstance(existing, dict) else ""
+    if existing_cmd == MARKER_COMMAND:
         print("statusLine already installed; nothing to do")
+        return 0
+    if STATUSLINE_MODULE_TAIL in existing_cmd:
+        # Our statusLine, but with a stale Python path (or a bare `python`/
+        # `python3`). Upgrade the command in place.
+        backup = CLAUDE_SETTINGS.with_suffix(f".json.bak.{int(time.time())}")
+        shutil.copy2(CLAUDE_SETTINGS, backup)
+        print(f"backed up existing settings → {backup}")
+        existing["command"] = MARKER_COMMAND
+        CLAUDE_SETTINGS.write_text(json.dumps(settings, indent=2))
+        print(f"upgraded statusLine interpreter path in {CLAUDE_SETTINGS}")
         return 0
     if existing:
         print(

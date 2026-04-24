@@ -19,7 +19,11 @@ import time
 from importlib import resources
 from pathlib import Path
 
-from .install_statusline import CLAUDE_SETTINGS, MARKER_COMMAND as STATUSLINE_COMMAND
+from .install_statusline import (
+    CLAUDE_SETTINGS,
+    MARKER_COMMAND as STATUSLINE_COMMAND,
+    STATUSLINE_MODULE_TAIL,
+)
 
 
 COMMANDS_DIR = Path.home() / ".claude" / "commands"
@@ -50,10 +54,14 @@ LEGACY_SHIPPED_MARKERS: dict[str, list[str]] = {
     ],
 }
 
+# Each hook command is pinned to `sys.executable` at install time so it keeps
+# working even when Claude Code spawns the hook from a shell whose PATH resolves
+# `python3` to a different interpreter (e.g. python@3.14) that doesn't have the
+# buddy package installed.
 HOOK_EVENTS = {
-    "Stop": "python3 -m buddy.hooks.on_stop",
-    "SessionStart": "python3 -m buddy.hooks.on_session_start",
-    "SessionEnd": "python3 -m buddy.hooks.on_session_end",
+    "Stop":         f"{sys.executable} -m buddy.hooks.on_stop",
+    "SessionStart": f"{sys.executable} -m buddy.hooks.on_session_start",
+    "SessionEnd":   f"{sys.executable} -m buddy.hooks.on_session_end",
 }
 
 HOOK_MARKER = "buddy.hooks."
@@ -234,6 +242,40 @@ def _strip_legacy_hooks(settings: dict) -> int:
     return pruned
 
 
+def _strip_stale_buddy_hooks(settings: dict) -> int:
+    """Remove `buddy.hooks.*` entries whose command doesn't match the current
+    `HOOK_EVENTS` value for that event. Lets re-runs upgrade the baked-in
+    Python path (e.g. an older install that hard-coded `python3`)."""
+    hooks = settings.get("hooks")
+    if not isinstance(hooks, dict):
+        return 0
+    pruned = 0
+    for event, entries in list(hooks.items()):
+        if not isinstance(entries, list):
+            continue
+        expected = HOOK_EVENTS.get(event)
+        new_entries: list = []
+        for matcher in entries:
+            if not isinstance(matcher, dict):
+                new_entries.append(matcher)
+                continue
+            kept_hooks = []
+            for hook in matcher.get("hooks", []):
+                cmd = hook.get("command", "") if isinstance(hook, dict) else ""
+                if HOOK_MARKER in cmd and cmd != expected:
+                    pruned += 1
+                    continue
+                kept_hooks.append(hook)
+            if kept_hooks:
+                matcher["hooks"] = kept_hooks
+                new_entries.append(matcher)
+        if new_entries:
+            hooks[event] = new_entries
+        else:
+            del hooks[event]
+    return pruned
+
+
 def _merge_hooks(settings: dict) -> int:
     added = 0
     hooks = settings.setdefault("hooks", {})
@@ -250,8 +292,13 @@ def _merge_statusline(settings: dict) -> str:
     """Returns 'installed', 'already-installed', 'upgraded', or 'conflict'."""
     existing = settings.get("statusLine")
     existing_cmd = str(existing.get("command", "")) if isinstance(existing, dict) else ""
-    if isinstance(existing, dict) and STATUSLINE_COMMAND in existing_cmd:
+    if isinstance(existing, dict) and existing_cmd == STATUSLINE_COMMAND:
         return "already-installed"
+    if isinstance(existing, dict) and STATUSLINE_MODULE_TAIL in existing_cmd:
+        # Our statusLine, but the stored command uses a stale Python path
+        # (e.g. bare `python` from v0.3.3). Upgrade the interpreter in place.
+        existing["command"] = STATUSLINE_COMMAND
+        return "upgraded"
     if isinstance(existing, dict) and LEGACY_STATUSLINE_MARKER in existing_cmd:
         # Pre-rename statusLine still in settings.json — the old module is gone
         # so leaving it would break every tick. Upgrade it in place.
@@ -293,14 +340,16 @@ def _deregister_legacy_mcp_server() -> None:
 def _register_mcp_server() -> str:
     """Register buddy as a user-scope MCP server via the `claude` CLI.
 
-    Returns a short status string for the summary line.
+    Always removes any existing `buddy` registration first so re-runs upgrade
+    the stored command (older installs baked `python3` into it; we now bake
+    `sys.executable`). Returns a short status string for the summary line.
     """
     if shutil.which("claude") is None:
         return (
             "WARNING — claude CLI not found on PATH; MCP server NOT registered.\n"
             "    Install Claude Code, then re-run `buddy-install` to finish wiring this up.\n"
             "    (Or register manually:"
-            " claude mcp add --scope user buddy -- python3 -m buddy.server)"
+            f" claude mcp add --scope user buddy -- {sys.executable} -m buddy.server)"
         )
 
     check = subprocess.run(
@@ -308,9 +357,14 @@ def _register_mcp_server() -> str:
         capture_output=True,
         text=True,
     )
-    if check.returncode == 0 and "buddy" in check.stdout.split():
-        # `.split()` avoids matching `buddy` as a substring of something else.
-        return "already registered (user scope)"
+    # `.split()` avoids matching `buddy` as a substring of something else.
+    had_prior = check.returncode == 0 and "buddy" in check.stdout.split()
+    if had_prior:
+        subprocess.run(
+            ["claude", "mcp", "remove", "--scope", "user", "buddy"],
+            capture_output=True,
+            text=True,
+        )
 
     result = subprocess.run(
         [
@@ -318,14 +372,14 @@ def _register_mcp_server() -> str:
             "--scope", "user",
             "buddy",
             "--",
-            "python3", "-m", "buddy.server",
+            sys.executable, "-m", "buddy.server",
         ],
         capture_output=True,
         text=True,
     )
     if result.returncode != 0:
         return f"FAILED: {result.stderr.strip() or result.stdout.strip()}"
-    return "registered at user scope"
+    return "re-registered (user scope)" if had_prior else "registered at user scope"
 
 
 def main() -> int:
@@ -354,6 +408,10 @@ def main() -> int:
     pruned = _strip_legacy_hooks(settings)
     if pruned:
         print(f"  legacy hooks: pruned {pruned} stale mcp_creature_bot entries")
+
+    stale = _strip_stale_buddy_hooks(settings)
+    if stale:
+        print(f"  hooks: pruned {stale} stale entry/entries (upgrading interpreter path)")
 
     added = _merge_hooks(settings)
     statusline_status = _merge_statusline(settings)
