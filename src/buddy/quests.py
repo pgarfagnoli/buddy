@@ -1,7 +1,6 @@
 """Quest registry, zones, smart selection, rolls, and flavor text."""
 from __future__ import annotations
 
-import json
 import random
 import shutil
 import subprocess
@@ -764,7 +763,7 @@ def _pick_quest_via_llm(
         "--setting-sources", "local",
         "--strict-mcp-config",
         "--disable-slash-commands",
-        "--output-format", "json",
+        "--output-format", "text",
         "--model", _LLM_MODEL_ID,
         "--tools", "",
     ]
@@ -776,16 +775,7 @@ def _pick_quest_via_llm(
     if res.returncode != 0:
         _llm_fail()
         return None
-    try:
-        envelope = json.loads(res.stdout)
-    except json.JSONDecodeError:
-        _llm_fail()
-        return None
-    result_raw = envelope.get("result")
-    if not isinstance(result_raw, str):
-        _llm_fail()
-        return None
-    parsed = _extract_json_object(result_raw)
+    parsed = _extract_json_object(res.stdout)
     if parsed is None:
         _llm_fail()
         return None

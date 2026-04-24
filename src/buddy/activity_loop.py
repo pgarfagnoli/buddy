@@ -216,7 +216,7 @@ def _call_claude_p(prompt: str) -> Optional[dict]:
         "--setting-sources", "local",
         "--strict-mcp-config",
         "--disable-slash-commands",
-        "--output-format", "json",
+        "--output-format", "text",
         "--model", MODEL_ID,
         "--tools", "",
     ]
@@ -230,16 +230,7 @@ def _call_claude_p(prompt: str) -> Optional[dict]:
     if res.returncode != 0:
         _llm_fail()
         return None
-    try:
-        envelope = json.loads(res.stdout)
-    except json.JSONDecodeError:
-        _llm_fail()
-        return None
-    result_raw = envelope.get("result")
-    if not isinstance(result_raw, str):
-        _llm_fail()
-        return None
-    result = _extract_json_object(result_raw)
+    result = _extract_json_object(res.stdout)
     if result is not None:
         _llm_failures = 0  # success — reset breaker
     else:
