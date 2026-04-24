@@ -1,6 +1,11 @@
 {
   "name": "pgarfagnoli-buddy",
-  "description": "Single-plugin marketplace shipping the buddy RPG companion for Claude Code.",
+  "owner": {
+    "name": "pgarfagnoli"
+  },
+  "metadata": {
+    "description": "Single-plugin marketplace shipping the buddy RPG companion for Claude Code."
+  },
   "plugins": [
     {
       "name": "buddy",
