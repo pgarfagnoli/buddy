@@ -15,7 +15,7 @@ A [Claude Code](https://docs.claude.com/en/docs/claude-code) plugin: a Pokemon-s
 Inside a Claude Code session:
 
 ```
-/plugin marketplace add pgarfagnoli/homebrew-buddy
+/plugin marketplace add pgarfagnoli/buddy
 /plugin install buddy
 ```
 
@@ -77,7 +77,7 @@ brew untap pgarfagnoli/buddy
 Then inside Claude Code:
 
 ```
-/plugin marketplace add pgarfagnoli/homebrew-buddy
+/plugin marketplace add pgarfagnoli/buddy
 /plugin install buddy
 /buddy:migrate
 ```

@@ -5,8 +5,8 @@
   "author": {
     "name": "pgarfagnoli"
   },
-  "homepage": "https://github.com/pgarfagnoli/homebrew-buddy",
-  "repository": "https://github.com/pgarfagnoli/homebrew-buddy",
+  "homepage": "https://github.com/pgarfagnoli/buddy",
+  "repository": "https://github.com/pgarfagnoli/buddy",
   "license": "MIT",
   "keywords": ["rpg", "gamification", "productivity", "pet", "pokemon"],
   "skills": "./skills/",
