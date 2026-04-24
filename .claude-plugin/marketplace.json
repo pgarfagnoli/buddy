@@ -1,0 +1,12 @@
+{
+  "name": "pgarfagnoli-buddy",
+  "description": "Single-plugin marketplace shipping the buddy RPG companion for Claude Code.",
+  "plugins": [
+    {
+      "name": "buddy",
+      "source": "./",
+      "description": "RPG buddy — Pokemon-style companion that gains XP from your prompts and goes on simulated quests.",
+      "version": "0.4.0-dev"
+    }
+  ]
+}
