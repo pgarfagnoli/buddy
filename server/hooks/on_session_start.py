@@ -5,6 +5,7 @@ reminder inside the session context.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -16,10 +17,39 @@ import state  # noqa: E402
 import migrate  # noqa: E402
 
 
+def _ensure_pane_symlink() -> None:
+    """Symlink buddy-pane into ~/.local/bin/ so users can run it from any terminal."""
+    plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
+    if not plugin_root:
+        return
+    src = Path(plugin_root) / "bin" / "buddy-pane"
+    if not src.exists():
+        return
+    bin_dir = Path.home() / ".local" / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    link = bin_dir / "buddy-pane"
+    if link.is_symlink() or link.exists():
+        if link.is_symlink() and link.resolve() == src.resolve():
+            return
+        link.unlink()
+    link.symlink_to(src)
+    path_dirs = os.environ.get("PATH", "").split(os.pathsep)
+    if str(bin_dir) not in path_dirs:
+        print(
+            f"buddy-pane has been symlinked to {link}. "
+            f"If the user cannot run `buddy-pane`, suggest they add "
+            f"~/.local/bin to their PATH."
+        )
+
+
 def main() -> int:
     try:
         _ = json.loads(sys.stdin.read() or "{}")
     except json.JSONDecodeError:
+        pass
+    try:
+        _ensure_pane_symlink()
+    except Exception:
         pass
     try:
         state.init_state_if_missing()
