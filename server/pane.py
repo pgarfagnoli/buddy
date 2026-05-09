@@ -25,9 +25,12 @@ from typing import Optional
 
 
 REFRESH_SECONDS = 2.0
-CLEAR_SCREEN = "\x1b[2J\x1b[H"
+CURSOR_HOME = "\x1b[H"
+ERASE_TO_EOS = "\x1b[J"
 HIDE_CURSOR = "\x1b[?25l"
 SHOW_CURSOR = "\x1b[?25h"
+ALT_SCREEN_ON = "\x1b[?1049h"
+ALT_SCREEN_OFF = "\x1b[?1049l"
 BAR_WIDTH = 16
 
 # ─── ANSI helpers ─────────────────────────────────────────────────────────
@@ -335,7 +338,7 @@ def _render(
 
 
 def _reset_terminal() -> None:
-    sys.stdout.write(SHOW_CURSOR)
+    sys.stdout.write(ALT_SCREEN_OFF + SHOW_CURSOR)
     sys.stdout.flush()
 
 
@@ -353,15 +356,15 @@ def main() -> int:
     sprites_dir = _resolve_sprites_dir()
     frame_idx = 0
     try:
-        sys.stdout.write(HIDE_CURSOR)
+        sys.stdout.write(ALT_SCREEN_ON + HIDE_CURSOR)
         while True:
             width = shutil.get_terminal_size(fallback=(64, 24)).columns
             state = _load_state(state_path) if state_path else None
-            sys.stdout.write(CLEAR_SCREEN)
+            sys.stdout.write(CURSOR_HOME)
             sys.stdout.write(
                 _render(state, state_path, width, frame_idx, sprites_dir)
             )
-            sys.stdout.write("\n")
+            sys.stdout.write("\n" + ERASE_TO_EOS)
             sys.stdout.flush()
             frame_idx += 1
             time.sleep(REFRESH_SECONDS)
