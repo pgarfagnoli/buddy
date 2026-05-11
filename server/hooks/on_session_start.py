@@ -17,29 +17,69 @@ import state  # noqa: E402
 import migrate  # noqa: E402
 
 
-def _ensure_pane_symlink() -> None:
-    """Symlink buddy-pane into ~/.local/bin/ so users can run it from any terminal."""
-    plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
-    if not plugin_root:
-        return
-    src = Path(plugin_root) / "bin" / "buddy-pane"
+def _ensure_symlink(bin_dir: Path, name: str, plugin_root: str) -> None:
+    """Symlink a buddy CLI into ~/.local/bin/ if not already current."""
+    src = Path(plugin_root) / "bin" / name
     if not src.exists():
         return
-    bin_dir = Path.home() / ".local" / "bin"
-    bin_dir.mkdir(parents=True, exist_ok=True)
-    link = bin_dir / "buddy-pane"
+    link = bin_dir / name
     if link.is_symlink() or link.exists():
         if link.is_symlink() and link.resolve() == src.resolve():
             return
         link.unlink()
     link.symlink_to(src)
+
+
+def _ensure_bin_symlinks() -> None:
+    """Symlink buddy-pane and buddy-statusline into ~/.local/bin/."""
+    plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
+    if not plugin_root:
+        return
+    bin_dir = Path.home() / ".local" / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_symlink(bin_dir, "buddy-pane", plugin_root)
+    _ensure_symlink(bin_dir, "buddy-statusline", plugin_root)
     path_dirs = os.environ.get("PATH", "").split(os.pathsep)
     if str(bin_dir) not in path_dirs:
         print(
-            f"buddy-pane has been symlinked to {link}. "
+            f"buddy CLIs have been symlinked to {bin_dir}. "
             f"If the user cannot run `buddy-pane`, suggest they add "
             f"~/.local/bin to their PATH."
         )
+
+
+_SETTINGS_PATH = Path.home() / ".claude" / "settings.json"
+_NEW_STATUSLINE_MARKER = "buddy-statusline"
+
+
+def _ensure_statusline() -> None:
+    """Add statusLine config to ~/.claude/settings.json if not already set."""
+    settings: dict = {}
+    if _SETTINGS_PATH.exists():
+        try:
+            settings = json.loads(_SETTINGS_PATH.read_text())
+        except (OSError, json.JSONDecodeError):
+            return
+    existing = settings.get("statusLine")
+    if isinstance(existing, dict):
+        cmd = str(existing.get("command", ""))
+        if _NEW_STATUSLINE_MARKER in cmd:
+            return
+        if cmd:
+            return
+    bin_dir = Path.home() / ".local" / "bin"
+    link = bin_dir / "buddy-statusline"
+    path_dirs = os.environ.get("PATH", "").split(os.pathsep)
+    if str(bin_dir) in path_dirs:
+        cmd = "buddy-statusline"
+    else:
+        cmd = str(link)
+    settings["statusLine"] = {"command": cmd}
+    try:
+        _SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _SETTINGS_PATH.write_text(json.dumps(settings, indent=2) + "\n")
+    except OSError:
+        pass
 
 
 def main() -> int:
@@ -48,7 +88,11 @@ def main() -> int:
     except json.JSONDecodeError:
         pass
     try:
-        _ensure_pane_symlink()
+        _ensure_bin_symlinks()
+    except Exception:
+        pass
+    try:
+        _ensure_statusline()
     except Exception:
         pass
     try:
