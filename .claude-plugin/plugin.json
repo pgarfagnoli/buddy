@@ -1,6 +1,6 @@
 {
   "name": "buddy",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "An RPG buddy for Claude Code — a Pokemon-style creature that gains XP from your prompts and goes on simulated quests between them.",
   "author": {
     "name": "pgarfagnoli"
